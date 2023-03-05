@@ -1,0 +1,212 @@
+openapi: 3.0.2
+servers:
+  - url: /api
+info:
+  version: 1.0.0
+  title: Small social net
+tags:
+  - name: socnet
+    description: Everything about socnet
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    LoginInput:
+      properties:
+        id:
+          type: string
+          x-ogen-name: Login
+        password:
+          type: string
+          x-ogen-name: Password
+      required:
+        - id
+        - password
+      type: object
+    LoginResponse:
+      required:
+        - token
+      type: object
+      properties:
+        token:
+          type: string
+    UserRegister:
+      type: object
+      required:
+        - password
+        - first_name
+        - second_name
+      properties:
+        first_name:
+          type: string
+          x-ogen-name: FirstName
+        second_name:
+          type: string
+          x-ogen-name: SecondName
+        age:
+          type: integer
+          x-ogen-name: Age
+        biography:
+          type: string
+          x-ogen-name: Biography
+        city:
+          type: string
+          x-ogen-name: City
+        password:
+          type: string
+          x-ogen-name: Password
+    UserRegisterResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          x-ogen-name: UserId
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          x-ogen-name: UserId
+        first_name:
+          type: string
+          x-ogen-name: FirstName
+        second_name:
+          type: string
+          x-ogen-name: SecondName
+        age:
+          type: integer
+          x-ogen-name: Age
+        biography:
+          type: string
+          x-ogen-name: Biography
+        city:
+          type: string
+          x-ogen-name: City
+  responses:
+    LoginResponse:
+      $ref: '#/components/schemas/LoginResponse'
+    UserRegisterResponse:
+      $ref: '#/components/schemas/UserRegisterResponse'
+    Error5xx:
+      description: Generic error
+      headers:
+        Retryafter:
+          required: false
+          schema:
+            type: integer
+            format: int
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              code:
+                type: integer
+                format: int
+                x-ogen-name: Code
+                x-omitempty: false
+              message:
+                type: string
+                x-ogen-name: Msg
+                x-omitempty: false
+              request_id:
+                type: string
+            additionalProperties:
+              type: object
+    ErrorGeneric:
+      description: Generic error
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              code:
+                type: integer
+                format: int
+                x-ogen-name: Code
+                x-omitempty: false
+              message:
+                type: string
+                x-ogen-name: Msg
+                x-omitempty: false
+              request_id:
+                type: string
+            additionalProperties:
+              type: object
+paths:
+  /login:
+    post:
+      description: Simplified user auth process post userID receive token
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: success auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/LoginResponse'
+        "400":
+          $ref: '#/components/responses/ErrorGeneric'
+        "404":
+          $ref: '#/components/responses/ErrorGeneric'
+        "500":
+          $ref: '#/components/responses/Error5xx'
+  /user/register:
+    post:
+      description: New user register
+      operationId: registerUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+      responses:
+        '200':
+          description: success auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegisterResponse'
+        "400":
+          $ref: '#/components/responses/ErrorGeneric'
+        "503":
+          $ref: '#/components/responses/Error5xx'
+        "500":
+          $ref: '#/components/responses/Error5xx'
+  /user/get/{id}:
+    get:
+      description: get user details by id
+      operationId: getUser
+      parameters:
+        - name: id
+          schema:
+            type: string
+          in: path
+          required: true
+      responses:
+        '200':
+          description: success get user details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          $ref: '#/components/responses/ErrorGeneric'
+        "404":
+          $ref: '#/components/responses/ErrorGeneric'
+        "503":
+          $ref: '#/components/responses/Error5xx'
+        "500":
+          $ref: '#/components/responses/Error5xx'

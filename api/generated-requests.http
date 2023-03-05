@@ -1,0 +1,24 @@
+###
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+  "id": "123",
+  "password": "123"
+}
+
+###
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "first_name": "f",
+  "second_name": "s",
+  "age": 22,
+  "biography": "",
+  "city": "",
+  "password": "123"
+}
+
+###
+GET http://localhost:8080/api/user/get/1

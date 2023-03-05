@@ -1,0 +1,7 @@
+port: 8080
+secretKey: secret
+tokenDuration: 8760h
+loglevel: 2
+databaseuri: postgres://rtknm:rtknm@127.0.0.1:9999/hgh?sslmode=disable
+dbMaxOpenConns: 10
+dbMaxIdleConns: 10

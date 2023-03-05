@@ -1,0 +1,245 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 1
+  # include test files or not, default is true
+  tests: true
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - 'fmt\.Errorf.*'
+  wrapcheck:
+    # An array of strings that specify substrings of signatures to ignore.
+    # If this set, it will override the default set of ignored signatures.
+    # See https://github.com/tomarrell/wrapcheck#configuration for more information.
+    #ignoreSigRegexps:
+    #  - ""
+    ignorePackageGlobs:
+      - github.com/pkg/errors
+  unused:
+    # treat code as a program (not a library) and report unused exported identifiers; default is false.
+    # XXX: if you enable this setting, unused will report a lot of false-positives in text editors:
+    # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
+    # with golangci-lint call it on a directory with the changed file.
+    check-exported: true
+  prealloc:
+    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
+    # True by default.
+    simple: false
+    range-loops: true # Report preallocation suggestions on range loops, true by default
+    for-loops: false # Report preallocation suggestions on for loops, false by default
+  rowserrcheck:
+    packages:
+      - github.com/jmoiron/sqlx
+  dogsled:
+    # checks assignments with too many blank identifiers; default is 2
+    max-blank-identifiers: 2
+  dupl:
+    # tokens count to trigger issue, 150 by default
+    threshold: 100
+  errcheck:
+    # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
+    # default is false: such cases aren't reported by default.
+    check-type-assertions: false
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
+    # default is false: such cases aren't reported by default.
+    check-blank: false
+  funlen:
+    lines: 400
+    statements: 100
+  #gci:
+    # put imports beginning with prefix after 3rd-party packages;
+    # only support one prefix
+    # if not set, use goimports.local-prefixes
+  #  local-prefixes: ""
+  nestif:
+    # minimal complexity of if statements to report, 5 by default
+    min-complexity: 7
+  ifshort:
+    # Maximum length of variable declaration measured in number of lines, after which linter won't suggest using short syntax.
+    # Has higher priority than max-decl-chars.
+    max-decl-lines: 1
+    # Maximum length of variable declaration measured in number of characters, after which linter won't suggest using short syntax.
+    max-decl-chars: 30
+  goconst:
+    # minimal length of string constant, 3 by default
+    min-len: 3
+    # minimal occurrences count to trigger, 3 by default
+    min-occurrences: 3
+  gocritic:
+    # Which checks should be enabled; can't be combined with 'disabled-checks';
+    # See https://go-critic.github.io/overview#checks-overview
+    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
+    # By default list of stable checks is used.
+    #    enabled-checks:
+    # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
+    disabled-checks:
+    #      - dupImport # https://github.com/go-critic/go-critic/issues/845
+    #      - ifElseChain
+    #      - octalLiteral
+      - whyNoLint
+      - commentedOutCode
+      - importShadow
+      - evalOrder
+    #      - wrapperFunc
+    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
+    # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
+    enabled-tags:
+      - performance
+      - diagnostic
+      - opinionated
+      - style
+    # Settings passed to gocritic.
+    # The settings key is the name of a supported gocritic checker.
+    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    settings:
+    #   captLocal: # must be valid enabled check name
+    #     # whether to restrict checker to params only (default true)
+    #     paramsOnly: true
+    #   elseif:
+    #     # whether to skip balanced if-else pairs (default true)
+    #     skipBalanced: true
+      hugeParam:
+    #     # size in bytes that makes the warning trigger (default 80)
+        sizeThreshold: 1024
+    #   nestingReduce:
+    #     # min number of statements inside a branch to trigger a warning (default 5)
+    #     bodyWidth: 5
+    #   rangeExprCopy:
+    #     # size in bytes that makes the warning trigger (default 512)
+    #     sizeThreshold: 512
+    #     # whether to check test functions (default true)
+    #     skipTestFuncs: true
+      rangeValCopy:
+    #     # size in bytes that makes the warning trigger (default 128)
+        sizeThreshold: 1024
+    #     # whether to check test functions (default true)
+    #     skipTestFuncs: true
+    #   truncateCmp:
+    #     # whether to skip int/uint/uintptr types (default true)
+    #     skipArchDependent: true
+    #   underef:
+    #     # whether to skip (*x).method() calls where x is a pointer receiver (default true)
+    #     skipRecvDeref: true
+    #     unnamedResult:
+    #     # whether to check exported functions
+    #     checkExported: true
+  gocyclo:
+    min-complexity: 50
+  goimports:
+    local-prefixes: github.com/vmedinskiy/highload/
+  golint:
+    min-confidence: 0
+  lll:
+    line-length: 140
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+
+linters:
+  # please, do not use `enable-all`: it's deprecated and will be removed soon.
+  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
+  disable-all: true
+  enable:
+    - forbidigo
+    - gofmt
+    - exportloopref
+    - durationcheck
+    - bidichk
+    - unconvert
+    - tenv
+    - noctx
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - forcetypeassert
+    - sqlclosecheck
+    - funlen
+    # - lll
+    - revive
+    - prealloc
+    # - goconst
+    - gocritic
+    - gosec
+    - stylecheck
+    - nestif
+    - nakedret
+    - noctx
+  # may be enabled:
+  # - bodyclose
+  # - dogsled
+  # - dupl
+  # - exportloopref
+  # - gocyclo
+  # - gofmt
+  # - goimports
+  # - golint
+  # - goprintffuncname
+    - gosimple
+  # - misspell
+  # - unconvert
+  # - unparam
+  # - errorlint
+  # - nolintlint
+  # - maligned
+  # - interfacer
+  # - goerr113
+  # - depguard
+
+  # don't enable:
+  # - whitespace
+  # - gochecknoinits
+  # - gomnd
+  # - nlreturn
+    - wrapcheck
+  # - typecheck
+  # - exhaustive
+  # - asciicheck
+  # - scopelint
+  # - gochecknoglobals
+  # - gocognit
+  # - godot
+  # - godox
+  # - testpackage
+  # - wsl
+
+issues:
+  #  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    - linters:
+        - stylecheck
+      # error strings should not be capitalized
+      text: "ST1005"
+    - linters:
+       - stylecheck
+      # comment on exported var
+      text: "ST1022"
+    - linters:
+      - stylecheck
+      # var sampleXml should be sampleXML
+      text: "ST1003"
+    - linters:
+        - revive
+      text: "var-naming:"
+    - linters:
+        - revive
+      text: "exported:"
+    - linters:
+        - gocritic
+      text: "docStub:"
+    - linters:
+        - gocritic
+      text: "commentFormatting:"
+    - linters:
+        - gocritic
+      text: "unnamedResult:"
+
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
