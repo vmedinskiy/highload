@@ -1,0 +1,31 @@
+{{- /*gotype: github.com/ogen-go/ogen/gen.TemplateConfig*/ -}}
+
+{{ define "parameters" }}
+{{ $pkg := $.Package }}
+{{ template "header" $ }}
+
+{{- range $op := $.Operations }}{{ if $op.Params }}
+	{{ template "parameters/operation" op_elem $op $ }}
+{{ end }}{{- end }}
+
+{{- range $op := $.Webhooks }}{{ if $op.Params }}
+    {{ template "parameters/operation" op_elem $op $ }}
+{{ end }}{{- end }}
+
+{{ end }}
+
+{{ define "parameters/operation" }}
+{{- /*gotype: github.com/ogen-go/ogen/gen.OperationElem*/ -}}{{ $op := $.Operation }}
+// {{ $op.Name }}Params is parameters of {{ $op.PrettyOperationID }} operation.
+type {{ $op.Name }}Params struct {
+{{- range $p := $op.Params }}
+	{{- template "godoc" $p.GoDoc }}
+	{{ $p.Name }} {{ $p.Type.Go }}
+{{- end }}
+}
+
+{{- if $.Config.AnyServerEnabled }}
+	{{- template "parameter_decoder" $op }}
+{{- end }}
+
+{{ end }}

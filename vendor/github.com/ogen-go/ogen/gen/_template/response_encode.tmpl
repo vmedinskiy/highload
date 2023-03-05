@@ -1,0 +1,158 @@
+{{- /*gotype: github.com/ogen-go/ogen/gen.TemplateConfig*/ -}}
+{{ define "response_encoders" }}
+{{ $pkg := $.Package }}
+{{ template "header" $ }}
+
+{{- if $.PathsServerEnabled }}
+{{- range $op := $.Operations }}
+	{{- template "response_encoders/operation" $op }}
+{{ end }}
+
+{{- if $.Error }}
+func encodeErrorResponse(response {{ $.ErrorGoType }}, w http.ResponseWriter, span trace.Span) error {
+	{{- if eq (len $.Error.ResponseInfo) 1 }}
+		{{- range $info := $.Error.ResponseInfo }}
+			{{- template "respond" $info }}
+		{{- end }}
+	{{- else }}
+		switch response := response.(type) {
+		{{- range $info := $.Error.ResponseInfo }}
+			case *{{ $info.Type.Name }}:
+			{{- template "respond" $info }}
+		{{- end }}
+		default:
+			return errors.Errorf("unexpected response type: %T", response)
+		}
+	{{- end }}
+}
+{{- end }}
+{{- end }}
+
+{{- if $.WebhookServerEnabled }}
+{{- range $op := $.Webhooks }}
+    {{- template "response_encoders/operation" $op }}
+{{ end }}
+{{- end }}
+
+{{ end }}
+
+{{ define "response_encoders/operation" }}
+{{- /*gotype: github.com/ogen-go/ogen/gen/ir.Operation*/ -}}{{ $op := $ }}
+func encode{{ $op.Name }}Response(response {{ $op.Responses.GoType }}, w http.ResponseWriter, span trace.Span) error {
+	{{- if eq (len $op.ListResponseTypes) 1 }}
+		{{- range $info := $op.ListResponseTypes }}
+			{{- template "respond" $info }}
+		{{- end }}
+	{{- else }}
+		switch response := response.(type) {
+		{{- range $info := $op.ListResponseTypes }}
+			case *{{ $info.Type.Name }}:
+			{{- template "respond" $info }}
+		{{- end }}
+		default:
+			return errors.Errorf("unexpected response type: %T", response)
+		}
+	{{- end -}}
+}
+{{ end }}
+
+{{ define "respond" }}
+{{- /*gotype: github.com/ogen-go/ogen/gen/ir.ResponseInfo*/ -}}
+
+{{- if and (not $.NoContent) (not $.ContentType.Mask) }}
+	w.Header().Set("Content-Type", {{ quote $.ContentType }})
+{{- end }}
+
+{{- if $.WithHeaders }}
+// Encoding response headers.
+{
+	h := uri.NewHeaderEncoder(w.Header())
+	{{- range $_, $header := $.Headers }}
+	// Encode {{ quote $header.Spec.Name }} header.
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    {{ quote $header.Spec.Name }},
+			Explode: {{ if $header.Spec.Explode }}true{{ else }}false{{ end }},
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error{
+			{{- $el := elem $header.Type (printf "response.%s" $header.Name) }}
+			{{- if $header.Spec.Content }}
+				enc := jx.GetEncoder()
+				func(e *jx.Encoder) {
+					{{ template "json/enc" $el }}
+				}(enc)
+				return e.EncodeValue(string(enc.Bytes()))
+			{{- else }}
+				{{- template "uri/encode" $el }}
+			{{- end }}
+		}); err != nil {
+			return errors.Wrap(err, {{ printf "encode %s header" $header.Spec.Name | quote }})
+		}
+	}
+	{{- end }}
+}
+{{- end }}
+
+{{- if $.WithStatusCode }}
+	code := response.StatusCode
+	if code == 0 {
+		// Set default status code.
+		code = http.StatusOK
+	}
+	w.WriteHeader(code)
+	st := http.StatusText(code)
+	if code >= http.StatusBadRequest {
+		span.SetStatus(codes.Error, st)
+	} else {
+		span.SetStatus(codes.Ok, st)
+	}
+{{- else }}
+	w.WriteHeader({{ $.StatusCode }})
+	{{- if ge .StatusCode 400 }}
+		span.SetStatus(codes.Error, http.StatusText({{ $.StatusCode }}))
+	{{- else }}
+		span.SetStatus(codes.Ok, http.StatusText({{ $.StatusCode }}))
+	{{- end }}
+{{- end }}
+
+{{ if $.NoContent }}
+	return nil
+{{- else }}
+	{{- $type := $.Type }}
+	{{- $var := "response" }}
+	{{- if or $.WithStatusCode $.WithHeaders }}
+		{{- $type = ($.Type.MustField "Response").Type }}
+		{{- $var = "response.Response" }}
+	{{- end }}
+
+	{{- if $.Encoding.JSON }}
+		{{- if $.JSONStreaming }}
+		e := jx.NewStreamingEncoder(w, -1)
+		{{- template "json/enc" elem $type $var }}
+		if err := e.Close(); err != nil {
+			return errors.Wrap(err, "flush streaming")
+		}
+		{{- else }}
+		e := jx.GetEncoder()
+		{{- template "json/enc" elem $type $var }}
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+		{{- end }}
+		return nil
+	{{- else if $type.IsStream }}
+		{{- if $type.IsBase64Stream }}
+		writer := base64.NewEncoder(base64.StdEncoding, w)
+		defer writer.Close()
+		{{- else }}
+		writer := w
+		{{- end }}
+		if _, err := io.Copy(writer, {{ $var }}); err != nil {
+			return errors.Wrap(err, "write")
+		}
+		return nil
+	{{- else }}
+		{{- errorf "%q: %s encoder not implemented" $.Encoding $type }}
+	{{- end }}
+{{- end }}
+{{ end }}

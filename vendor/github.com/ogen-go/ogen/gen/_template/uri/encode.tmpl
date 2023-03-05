@@ -1,0 +1,42 @@
+{{- /*gotype: github.com/ogen-go/ogen/gen.Elem*/ -}}
+{{- define "uri/encode" }}
+{{- $t := $.Type }}
+{{- $var := $.Var }}
+{{- if $t.CustomFormat }}
+	return e.EncodeValue(format{{ $t.CustomFormat }}().EncodeText({{ $var }}))
+{{- else if $t.IsPrimitive }}
+	return e.EncodeValue(conv.{{ $t.ToString }}({{ $var }}))
+{{- else if $t.IsEnum }}
+	return e.EncodeValue(conv.{{ $t.ToString }}({{ $t.Primitive.String }}({{ $var }})))
+{{- else if $t.IsArray  }}
+	return e.EncodeArray(func(e uri.Encoder) error {
+		for i, item := range {{ $var }} {
+			if err := func() error {
+				{{- template "uri/encode" elem $t.Item "item" }}
+			}(); err != nil {
+				return errors.Wrapf(err, "[%d]", i)
+			}
+		}
+		return nil
+	})
+{{- else if $t.IsAlias }}
+	if unwrapped := {{ $t.AliasTo.Go }}({{ $var }}); true {
+		{{- template "uri/encode" elem $t.AliasTo "unwrapped" }}
+	}
+	return nil
+{{- else if $t.IsGeneric }}
+	if val, ok := {{ $var }}.Get(); ok {
+		{{- template "uri/encode" elem $t.GenericOf "val" }}
+	}
+	return nil
+{{- else if $t.IsPointer }}
+	if v := {{ $var }}; v != nil {
+		{{- template "uri/encode" elem $t.PointerTo "(*v)" }}
+	}
+	return nil
+{{- else if $t.IsStruct }}
+	return {{ $var }}.EncodeURI(e)
+{{- else }}
+	{{ errorf "unexpected kind %s" $t.Kind }}
+{{- end }}
+{{- end }}

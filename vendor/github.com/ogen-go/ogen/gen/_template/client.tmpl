@@ -1,0 +1,287 @@
+{{ define "client" }}
+{{- /*gotype: github.com/ogen-go/ogen/gen.TemplateConfig*/ -}}
+{{ $pkg := $.Package }}
+{{ template "header" $ }}
+
+{{- if $.PathsClientEnabled }}
+{{- with $ops := $.Operations }}
+// Client implements OAS client.
+type Client struct {
+	serverURL *url.URL
+	{{- if $.Securities }}
+	sec 	  SecuritySource
+	{{- end }}
+	baseClient
+}
+
+{{- if $.PathsServerEnabled }}
+{{- if $.Error }}
+type errorHandler interface {
+	NewError(ctx context.Context, err error) {{ $.ErrorGoType }}
+}
+{{- end }}
+var _ Handler = struct{
+	{{ if $.Error }}errorHandler{{- end }}
+	*Client
+}{}
+{{- end }}
+
+// NewClient initializes new Client defined by OAS.
+func NewClient(serverURL string, {{- if $.Securities }}sec SecuritySource,{{- end }} opts ...ClientOption) (*Client, error) {
+	u, err := url.Parse(serverURL)
+	if err != nil {
+		return nil, err
+	}
+	c, err := newClientConfig(opts...).baseClient()
+	if err != nil {
+		return nil, err
+	}
+	return &Client{
+		serverURL: u,
+		{{- if $.Securities }}
+		sec: sec,
+		{{- end }}
+		baseClient: c,
+	}, nil
+}
+
+type serverURLKey struct{}
+
+// WithServerURL sets context key to override server URL.
+func WithServerURL(ctx context.Context, u *url.URL) context.Context {
+	return context.WithValue(ctx, serverURLKey{}, u)
+}
+
+func (c *Client) requestURL(ctx context.Context) *url.URL {
+	u, ok := ctx.Value(serverURLKey{}).(*url.URL)
+	if !ok {
+		return c.serverURL
+	}
+	return u
+}
+
+{{- range $op := $ops }}
+	{{ template "client/operation" $op }}
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{- if $.WebhookClientEnabled }}
+{{- with $ops := $.Webhooks }}
+// WebhookClient implements webhook client.
+type WebhookClient struct {
+	baseClient
+}
+
+// NewWebhookClient initializes new WebhookClient.
+func NewWebhookClient(opts ...ClientOption) (*WebhookClient, error) {
+	c, err := newClientConfig(opts...).baseClient()
+	if err != nil {
+		return nil, err
+	}
+	return &WebhookClient{
+		baseClient: c,
+	}, nil
+}
+
+{{- range $op := $ops }}
+    {{ template "client/operation" $op }}
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{ end }}
+
+{{ define "client/operation" }}
+{{- /*gotype: github.com/ogen-go/ogen/gen/ir.Operation*/ -}}{{ $op := $ }}
+// {{ $op.Name }} invokes {{ $op.PrettyOperationID }} operation.
+//
+{{- template "godoc_op" $op }}
+func (c *{{ if $op.WebhookInfo }}Webhook{{ end }}Client) {{ $op.Name }}(ctx context.Context
+	{{- if $op.WebhookInfo }}, targetURL string{{ end }}
+	{{- if $op.Request }}, request {{ $op.Request.GoType }}{{ end }}
+	{{- if $op.Params }}, params {{ $op.Name }}Params {{ end }}) {{ $op.Responses.ResultTuple "" "" }} {
+	res, err := c.send{{ $op.Name }}(ctx
+		{{- if $op.WebhookInfo }},targetURL{{ end -}}
+		{{- if $op.Request }},request{{ end -}}
+		{{- if $op.Params }},params{{ end -}}
+	)
+	_ = res
+	return {{ if $op.Responses.DoPass }}res,{{ end }} err
+}
+
+func (c *{{ if $op.WebhookInfo }}Webhook{{ end }}Client) send{{ $op.Name }}(ctx context.Context
+	{{- if $op.WebhookInfo }}, targetURL string{{ end }}
+	{{- if $op.Request }}, request {{ $op.Request.GoType }}{{ end }}
+	{{- if $op.Params }}, params {{ $op.Name }}Params {{ end }}) (res {{ $op.Responses.GoType }}, err error) {
+
+	{{- $hasOTELAttrs := false }}
+	{{- with $attrs := $op.OTELAttributes }}
+	{{- $hasOTELAttrs = true }}
+	otelAttrs := []attribute.KeyValue{
+		{{- range $attr := $attrs }}
+		{{ $attr.String }},
+		{{- end }}
+	}
+	{{- else }}
+	var otelAttrs []attribute.KeyValue
+	{{- end }}
+
+	{{- if $op.Request }}{{/* Request validation */}}
+		{{- if $op.Request.Type.IsInterface }}
+			// Validate request before sending.
+			switch request := request.(type) {
+			{{- if $op.Request.EmptyBody }}
+			case *{{ $op.Request.EmptyBody.Go }}:
+				// Validation is not needed for the empty body type.
+			{{- end }}
+			{{- range $_, $media := $op.Request.Contents }}
+			{{- $type := $media.Type }}
+			case *{{ $type.Go }}:
+				{{- if $type.NeedValidation }}
+					if err := func() error {
+						{{- template "validate" elem $type "request" }}
+					}(); err != nil {
+						return res, errors.Wrap(err, "validate")
+					}
+				{{- else }}
+				// Validation is not required for this type.
+				{{- end }}
+			{{- end }}
+			default:
+				return res, errors.Errorf("unexpected request type: %T", request)
+			}
+		{{- else if $op.Request.Type.NeedValidation }}
+			// Validate request before sending.
+			if err := func() error {
+				{{- template "validate" elem $op.Request.Type "request" }}
+			}(); err != nil {
+				return res, errors.Wrap(err, "validate")
+			}
+		{{- end }}
+	{{- end }}{{/* Request validation */}}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, elapsedDuration.Microseconds(), otelAttrs...)
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, otelAttrs...)
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, {{ quote $op.Name }},
+		{{- if $hasOTELAttrs }}
+		trace.WithAttributes(otelAttrs...),
+		{{- end }}
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, otelAttrs...)
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	{{- if $op.WebhookInfo }}
+	u, err := url.Parse(targetURL)
+	if err != nil {
+		return res, errors.Wrap(err, "parse target URL")
+	}
+	{{- else }}
+		{{- template "encode_path_parameters" $op }}
+	{{- end }}
+
+	{{ if $op.HasQueryParams }}
+	stage = "EncodeQueryParams"
+	{{- template "encode_query_parameters" $op }}
+	{{- end }}
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, {{ $op.Spec.HTTPMethod | upper | quote }}, u, nil)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	{{- if $op.Request }}
+	if err := encode{{ $op.Name }}Request(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+	{{- end }}
+
+	{{ if $op.HasHeaderParams }}
+	stage = "EncodeHeaderParams"
+	{{- template "encode_header_parameters" $op }}
+	{{- end }}
+
+	{{ if $op.HasCookieParams }}
+	stage = "EncodeCookieParams"
+	{{- template "encode_cookie_parameters" $op }}
+    {{- end }}
+
+	{{- with $securities := $op.Security.Securities }}
+	{
+		type bitset = [{{ $op.Security.BitArrayLen }}]uint8
+		var satisfied bitset
+		{{- range $idx, $s := $op.Security.Securities }}
+		{
+			{{- $securityName := $s.Type.Name }}
+			stage = {{ printf "Security:%s" $securityName | quote }}
+			switch err := c.security{{ $securityName }}(ctx, {{ quote $op.Name }}, r); err {
+			case nil:
+				satisfied[{{ div $idx 8 }}] |= 1 << {{ mod $idx 8 }}
+			case ogenerrors.ErrSkipClientSecurity:
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, {{ printf "security %q" $securityName | quote }})
+			}
+		}
+		{{- end }}
+
+		if ok := func() bool {
+			nextRequirement:
+			for _, requirement := range []bitset{
+				{{- range $req := $op.Security.Requirements }}
+				{
+                	{{- range $mask := $req }}{{ printf "%#08b" $mask }},{{ end -}}
+				},
+				{{- end }}
+			} {
+				for i, mask := range requirement {
+					if satisfied[i] & mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, errors.New("no security requirement satisfied")
+		}
+	}
+	{{- end }}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decode{{ $op.Name }}Response(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+{{ end }}
