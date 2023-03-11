@@ -40,6 +40,18 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
+	case *GetUserApplicationJSONUnauthorized:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(401)
+		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := jx.GetEncoder()
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+		return nil
+
 	case *GetUserApplicationJSONNotFound:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(404)

@@ -134,7 +134,7 @@ func newServer(cfg *config.Config) *Server {
 }
 
 func (s *Server) setupHandlers(r *chi.Mux) {
-	apiHandler, err := api.NewServer(handlers.NewServerHandler())
+	apiHandler, err := api.NewServer(handlers.NewServerHandler(), nil)
 	if err != nil {
 		log.L().Fatal(err)
 	}

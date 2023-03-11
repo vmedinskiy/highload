@@ -9,14 +9,16 @@ tags:
     description: Everything about socnet
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: xsession
   schemas:
     LoginInput:
       properties:
         id:
-          type: string
+          type: integer
+          format: int64
           x-ogen-name: Login
         password:
           type: string
@@ -61,13 +63,15 @@ components:
       type: object
       properties:
         user_id:
-          type: string
+          type: integer
+          format: int64
           x-ogen-name: UserId
     User:
       type: object
       properties:
         id:
-          type: string
+          type: integer
+          format: int64
           x-ogen-name: UserId
         first_name:
           type: string
@@ -111,7 +115,6 @@ components:
                 x-omitempty: false
               message:
                 type: string
-                x-ogen-name: Msg
                 x-omitempty: false
               request_id:
                 type: string
@@ -133,7 +136,6 @@ components:
                 x-omitempty: false
               message:
                 type: string
-                x-ogen-name: Msg
                 x-omitempty: false
               request_id:
                 type: string
@@ -187,6 +189,8 @@ paths:
           $ref: '#/components/responses/Error5xx'
   /user/get/{id}:
     get:
+      security:
+        - cookieAuth: []
       description: get user details by id
       operationId: getUser
       parameters:
@@ -205,6 +209,8 @@ paths:
         "400":
           $ref: '#/components/responses/ErrorGeneric'
         "404":
+          $ref: '#/components/responses/ErrorGeneric'
+        "401":
           $ref: '#/components/responses/ErrorGeneric'
         "503":
           $ref: '#/components/responses/Error5xx'

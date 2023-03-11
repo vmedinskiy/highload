@@ -111,6 +111,18 @@ func TestGetUserApplicationJSONNotFound_EncodeDecode(t *testing.T) {
 	var typ2 GetUserApplicationJSONNotFound
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
+func TestGetUserApplicationJSONUnauthorized_EncodeDecode(t *testing.T) {
+	var typ GetUserApplicationJSONUnauthorized
+	typ.SetFake()
+
+	e := jx.Encoder{}
+	typ.Encode(&e)
+	data := e.Bytes()
+	require.True(t, std.Valid(data), "Encoded: %s", data)
+
+	var typ2 GetUserApplicationJSONUnauthorized
+	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
+}
 func TestLoginInput_EncodeDecode(t *testing.T) {
 	var typ LoginInput
 	typ.SetFake()

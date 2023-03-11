@@ -2,6 +2,20 @@
 
 package generated
 
+type CookieAuth struct {
+	APIKey string
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *CookieAuth) GetAPIKey() string {
+	return s.APIKey
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *CookieAuth) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
 type Error5xx struct {
 	Code            OptInt    `json:"code"`
 	Message         string    `json:"message"`
@@ -168,14 +182,18 @@ type GetUserApplicationJSONServiceUnavailable Error5xxHeaders
 
 func (*GetUserApplicationJSONServiceUnavailable) getUserRes() {}
 
+type GetUserApplicationJSONUnauthorized ErrorGeneric
+
+func (*GetUserApplicationJSONUnauthorized) getUserRes() {}
+
 // Ref: #/components/schemas/LoginInput
 type LoginInput struct {
-	ID       string `json:"id"`
+	ID       int64  `json:"id"`
 	Password string `json:"password"`
 }
 
 // GetID returns the value of ID.
-func (s *LoginInput) GetID() string {
+func (s *LoginInput) GetID() int64 {
 	return s.ID
 }
 
@@ -185,7 +203,7 @@ func (s *LoginInput) GetPassword() string {
 }
 
 // SetID sets the value of ID.
-func (s *LoginInput) SetID(val string) {
+func (s *LoginInput) SetID(val int64) {
 	s.ID = val
 }
 
@@ -259,6 +277,52 @@ func (o OptInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptInt64 returns new OptInt64 with value set to v.
+func NewOptInt64(v int64) OptInt64 {
+	return OptInt64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInt64 is optional int64.
+type OptInt64 struct {
+	Value int64
+	Set   bool
+}
+
+// IsSet returns true if OptInt64 was set.
+func (o OptInt64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt64) Reset() {
+	var v int64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt64) SetTo(v int64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt64) Get() (v int64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt64) Or(d int64) int64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -367,7 +431,7 @@ func (*RegisterUserApplicationJSONServiceUnavailable) registerUserRes() {}
 
 // Ref: #/components/schemas/User
 type User struct {
-	ID         OptString `json:"id"`
+	ID         OptInt64  `json:"id"`
 	FirstName  OptString `json:"first_name"`
 	SecondName OptString `json:"second_name"`
 	Age        OptInt    `json:"age"`
@@ -376,7 +440,7 @@ type User struct {
 }
 
 // GetID returns the value of ID.
-func (s *User) GetID() OptString {
+func (s *User) GetID() OptInt64 {
 	return s.ID
 }
 
@@ -406,7 +470,7 @@ func (s *User) GetCity() OptString {
 }
 
 // SetID sets the value of ID.
-func (s *User) SetID(val OptString) {
+func (s *User) SetID(val OptInt64) {
 	s.ID = val
 }
 
@@ -509,16 +573,16 @@ func (s *UserRegister) SetPassword(val string) {
 
 // Ref: #/components/schemas/UserRegisterResponse
 type UserRegisterResponse struct {
-	UserID OptString `json:"user_id"`
+	UserID OptInt64 `json:"user_id"`
 }
 
 // GetUserID returns the value of UserID.
-func (s *UserRegisterResponse) GetUserID() OptString {
+func (s *UserRegisterResponse) GetUserID() OptInt64 {
 	return s.UserID
 }
 
 // SetUserID sets the value of UserID.
-func (s *UserRegisterResponse) SetUserID(val OptString) {
+func (s *UserRegisterResponse) SetUserID(val OptInt64) {
 	s.UserID = val
 }
 

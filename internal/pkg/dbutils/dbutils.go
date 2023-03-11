@@ -3,7 +3,6 @@ package dbutils
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/go-faster/errors"
 	"github.com/jackc/pgx/v4"
@@ -76,7 +75,7 @@ func WrapTxx(ctx context.Context, db DB, opts *sql.TxOptions, f TxFunc) (err err
 
 	tx, err = db.BeginTxx(ctx, opts)
 	if err != nil {
-		return fmt.Errorf("%w, begin transaction", err)
+		return errors.Errorf("%w, begin transaction", err)
 	}
 	defer func() {
 		r := recover()
