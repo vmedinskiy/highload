@@ -36,6 +36,6 @@ func (UnimplementedHandler) LoginUser(ctx context.Context, req *LoginInput) (r L
 // New user register.
 //
 // POST /user/register
-func (UnimplementedHandler) RegisterUser(ctx context.Context, req OptUserRegister) (r RegisterUserRes, _ error) {
+func (UnimplementedHandler) RegisterUser(ctx context.Context, req *UserRegister) (r RegisterUserRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

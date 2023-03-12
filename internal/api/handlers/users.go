@@ -2,52 +2,54 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 
 	api "github.com/vmedinskiy/highload/api/generated"
+	"github.com/vmedinskiy/highload/internal/pkg/user"
 )
 
-func (u *ServerHandler) GetUser(ctx context.Context, params api.GetUserParams) (api.GetUserRes, error) {
-
-	u.mux.Lock()
-	defer u.mux.Unlock()
-
-	if u.users == nil {
-		return nil, nil
+func (s *ServerHandler) GetUser(ctx context.Context, params api.GetUserParams) (api.GetUserRes, error) {
+	u, err := s.userEntity.GetByID(ctx, params.ID)
+	if err != nil {
+		return getUserError(ctx, err), nil
 	}
-
-	user, ok := u.users[params.ID]
-	if !ok {
-		return &api.User{
-			ID:        api.NewOptString("1"),
-			FirstName: api.NewOptString("2"),
-		}, nil
-	}
-
 	return &api.User{
-		ID:        user.ID,
-		FirstName: user.FirstName,
+		ID:         u.ID,
+		FirstName:  u.FirstName,
+		SecondName: u.SecondName,
+		Age:        u.Age.Int32,
+		Biography:  u.Biography.String,
+		City:       u.City.String,
 	}, nil
 }
 
-func (u *ServerHandler) LoginUser(ctx context.Context, req *api.LoginInput) (api.LoginUserRes, error) {
-	u.mux.Lock()
-	defer u.mux.Unlock()
-
-	if u.users == nil {
-		u.users = make(map[string]api.User)
+func (s *ServerHandler) LoginUser(ctx context.Context, req *api.LoginInput) (api.LoginUserRes, error) {
+	u, err := s.userEntity.Login(ctx, req.ID, req.Password)
+	if err != nil {
+		return loginError(ctx, err), nil
 	}
-
-	return &api.LoginResponse{Token: "1"}, nil
+	t, err := s.jwtManager.Generate(u)
+	if err != nil {
+		return loginError(ctx, err), nil
+	}
+	return &api.LoginResponse{
+		Token: t,
+	}, nil
 }
 
-func (u *ServerHandler) RegisterUser(ctx context.Context, req api.OptUserRegister) (api.RegisterUserRes, error) {
+func (s *ServerHandler) RegisterUser(ctx context.Context, req *api.UserRegister) (api.RegisterUserRes, error) {
+	id, err := s.userEntity.Register(ctx, &user.User{
+		FirstName:  req.FirstName,
+		SecondName: req.SecondName,
+		Age:        sql.NullInt32{Int32: req.Age.Value, Valid: req.Age.Set},
+		Biography:  sql.NullString{String: req.Biography.Value, Valid: req.Biography.Set},
+		City:       sql.NullString{String: req.City.Value, Valid: req.City.Set},
+		Password:   req.Password,
+	})
 
-	u.mux.Lock()
-	defer u.mux.Unlock()
-
-	if u.users == nil {
-		u.users = make(map[string]api.User)
+	if err != nil {
+		return registerUserError(ctx, err), nil
 	}
 
-	return &api.UserRegisterResponse{UserID: api.NewOptString("1")}, nil
+	return &api.UserRegisterResponse{UserID: id}, nil
 }

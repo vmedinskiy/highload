@@ -18,7 +18,7 @@ type Manager struct {
 // UserClaims is a custom JWT claims that contains some user's information
 type UserClaims struct {
 	jwt.RegisteredClaims
-	Username int64 `json:"userID"`
+	UserID int64 `json:"userID"`
 }
 
 // NewManager returns a new JWT manager
@@ -30,8 +30,9 @@ func (manager *Manager) Generate(user *user.User) (string, error) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(manager.tokenDuration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Username: user.ID,
+		UserID: user.ID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -40,7 +41,7 @@ func (manager *Manager) Generate(user *user.User) (string, error) {
 }
 
 // Verify verifies the access token string and return a user claim if the token is valid
-func (manager *Manager) Verify(accessToken string) (*UserClaims, error) {
+func (manager *Manager) Verify(accessToken string) (int64, error) {
 	token, err := jwt.ParseWithClaims(
 		accessToken,
 		&UserClaims{},
@@ -55,13 +56,13 @@ func (manager *Manager) Verify(accessToken string) (*UserClaims, error) {
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid token")
+		return -1, errors.Wrap(err, "invalid token")
 	}
 
 	claims, ok := token.Claims.(*UserClaims)
 	if !ok {
-		return nil, errors.New("invalid token claims")
+		return -1, errors.New("invalid token claims")
 	}
 
-	return claims, nil
+	return claims.UserID, nil
 }

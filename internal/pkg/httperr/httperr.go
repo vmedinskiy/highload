@@ -1,72 +1,60 @@
 package httperr
 
 import (
-	"encoding/json"
-	"errors"
+	"context"
 	"net/http"
+
+	"github.com/go-faster/errors"
+
+	api "github.com/vmedinskiy/highload/api/generated"
 )
 
-const (
-
-	// HeaderAccept http header Accept.
-	HeaderAccept      = "Accept"
-	HeaderContentType = "Content-Type"
-	// ContentTypeJSON content type json.
-	ContentTypeJSON = "application/json"
-)
-
-var unexpectedNilError = responder{
-	Msg:  "unexpected nil error",
-	Code: http.StatusInternalServerError,
-}
-
-type responder struct {
-	Msg  string `json:"message"`
-	Code int    `json:"code"`
+type ErrorResponder struct {
+	Msg        string
+	Code       int
+	RetryAfter int
 	error
 }
 
-func (v responder) writeResponse(w http.ResponseWriter) {
-	w.Header().Add(HeaderAccept, ContentTypeJSON)
-	w.Header().Add(HeaderContentType, ContentTypeJSON)
-	w.WriteHeader(v.Code)
-	if bodyAllowedForStatus(v.Code) {
-		payload, err := json.Marshal(v)
-		if err != nil {
-			panic(err)
-		}
-
-		if _, err := w.Write(payload); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
-
-func Response(w http.ResponseWriter, err error, code int) {
-	if err == nil {
-		unexpectedNilError.writeResponse(w)
-		return
-	}
-
-	var targetError *responder
+func ToErrorResponder(err error) *ErrorResponder {
+	var targetError *ErrorResponder
 	if errors.As(err, &targetError) {
-		targetError.writeResponse(w)
-		return
+		return targetError
 	}
-
-	resp := responder{
-		Msg:  err.Error(),
-		Code: code,
-	}
-	resp.writeResponse(w)
+	//nolint:forcetypeassert
+	return Wrap(err, http.StatusInternalServerError).(*ErrorResponder)
 }
 
-func Wrap(err error, code int) error {
-	return &responder{
-		error: err,
-		Code:  code,
-		Msg:   err.Error(),
+func ApiError5xx(_ context.Context, targetError *ErrorResponder) *api.Error5xxHeaders {
+	result := &api.Error5xxHeaders{
+		Response: api.Error5xx{
+			Message: targetError.Msg,
+			Code:    targetError.Code,
+		},
+	}
+	if targetError.RetryAfter != 0 {
+		result.Retryafter = api.NewOptInt(targetError.RetryAfter)
+	}
+	return result
+}
+
+func ApiErrorGeneric(_ context.Context, targetError *ErrorResponder) *api.ErrorGeneric {
+	return &api.ErrorGeneric{
+		Message: targetError.Msg,
+		Code:    targetError.Code,
+	}
+}
+
+func Wrap(err error, code int, retryAfter ...int) error {
+	var rA int
+	if len(retryAfter) > 0 {
+		rA = retryAfter[0]
+	}
+	return &ErrorResponder{
+		error:      err,
+		Code:       code,
+		Msg:        err.Error(),
+		RetryAfter: rA,
 	}
 }
 

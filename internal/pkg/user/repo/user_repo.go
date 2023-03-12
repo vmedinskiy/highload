@@ -32,18 +32,18 @@ func NewRepo(db sqlx.ExtContext, saltLn int) *Repo {
 	}
 }
 
-func (r *Repo) Create(ctx context.Context, user user.User) (int64, error) {
+func (r *Repo) Create(ctx context.Context, user *user.User) (int64, error) {
 	salt := r.makeSalt()
 	user.HashedPassword = r.hashPass(user.Password, salt)
 	q := `insert 
 		  into public.users 
 			(first_name, second_name, age, biography, city, pwdhsh) 
           values
-			(:first_name, :second_name, :age, :biography, :pwdhsh) 
+			(:first_name, :second_name, :age, :biography, :city, :pwdhsh) 
 		  returning id`
 
 	var id int64
-	if err := dbutils.NamedGet(ctx, r.DB, &id, q, &user); err != nil {
+	if err := dbutils.NamedGet(ctx, r.DB, &id, q, user); err != nil {
 		return -1, errors.Wrap(err, "creating new user")
 	}
 	return id, nil
@@ -87,7 +87,7 @@ func (r *Repo) CheckPasswordByID(ctx context.Context, id int64, pass string) (*u
 		return nil, err // 500 something wrong
 	}
 	if err := r.isPasswordValid(pass, resUser); err != nil {
-		return nil, httperr.Wrap(err, http.StatusUnauthorized) // 401 no such user
+		return nil, httperr.Wrap(err, http.StatusUnauthorized) // 401 not valid pass
 	}
 	return resUser, nil
 }

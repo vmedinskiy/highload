@@ -1,22 +1,30 @@
 package handlers
 
 import (
-	"sync"
+	"context"
 
 	api "github.com/vmedinskiy/highload/api/generated"
+	"github.com/vmedinskiy/highload/internal/pkg/jwt"
+	"github.com/vmedinskiy/highload/internal/pkg/user"
 )
 
 // Compile-time check for Handler.
 var _ api.Handler = (*ServerHandler)(nil)
 
-type ServerHandler struct {
-	users map[string]api.User
-	id    string
-	mux   sync.Mutex
+type UserEntity interface {
+	Register(ctx context.Context, user *user.User) (int64, error)
+	GetByID(ctx context.Context, id int64) (*user.User, error)
+	Login(ctx context.Context, id int64, pass string) (*user.User, error)
 }
 
-func NewServerHandler() *ServerHandler {
+type ServerHandler struct {
+	userEntity UserEntity
+	jwtManager *jwt.Manager
+}
+
+func NewServerHandler(userEntity UserEntity, jwtManager *jwt.Manager) *ServerHandler {
 	return &ServerHandler{
-		users: make(map[string]api.User),
+		userEntity: userEntity,
+		jwtManager: jwtManager,
 	}
 }

@@ -49,6 +49,7 @@ components:
           x-ogen-name: SecondName
         age:
           type: integer
+          format: int32
           x-ogen-name: Age
         biography:
           type: string
@@ -61,6 +62,8 @@ components:
           x-ogen-name: Password
     UserRegisterResponse:
       type: object
+      required:
+        - user_id
       properties:
         user_id:
           type: integer
@@ -68,6 +71,13 @@ components:
           x-ogen-name: UserId
     User:
       type: object
+      required:
+        - id
+        - first_name
+        - second_name
+        - age
+        - biography
+        - city
       properties:
         id:
           type: integer
@@ -81,6 +91,7 @@ components:
           x-ogen-name: SecondName
         age:
           type: integer
+          format: int32
           x-ogen-name: Age
         biography:
           type: string
@@ -107,6 +118,7 @@ components:
             type: object
             required:
               - message
+              - code
             properties:
               code:
                 type: integer
@@ -128,6 +140,7 @@ components:
             type: object
             required:
               - message
+              - code
             properties:
               code:
                 type: integer
@@ -155,6 +168,11 @@ paths:
       responses:
         '200':
           description: success auth
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: xsession=abcde12345; Path=/; HttpOnly
           content:
             application/json:
               schema:
@@ -170,6 +188,7 @@ paths:
       description: New user register
       operationId: registerUser
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -183,10 +202,11 @@ paths:
                 $ref: '#/components/schemas/UserRegisterResponse'
         "400":
           $ref: '#/components/responses/ErrorGeneric'
-        "503":
-          $ref: '#/components/responses/Error5xx'
         "500":
           $ref: '#/components/responses/Error5xx'
+        "503":
+          $ref: '#/components/responses/Error5xx'
+
   /user/get/{id}:
     get:
       security:
@@ -196,7 +216,8 @@ paths:
       parameters:
         - name: id
           schema:
-            type: string
+            type: integer
+            format: int64
           in: path
           required: true
       responses:
@@ -212,7 +233,7 @@ paths:
           $ref: '#/components/responses/ErrorGeneric'
         "401":
           $ref: '#/components/responses/ErrorGeneric'
-        "503":
-          $ref: '#/components/responses/Error5xx'
         "500":
+          $ref: '#/components/responses/Error5xx'
+        "503":
           $ref: '#/components/responses/Error5xx'

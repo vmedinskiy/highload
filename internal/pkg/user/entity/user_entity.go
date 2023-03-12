@@ -11,33 +11,42 @@ import (
 )
 
 type UserRepo interface {
-	Create(ctx context.Context, user user.User) (int64, error)
+	Create(ctx context.Context, user *user.User) (int64, error)
 	GetByID(ctx context.Context, id int64) (*user.User, error)
 	CheckPasswordByID(ctx context.Context, id int64, pass string) (*user.User, error)
 }
 
-type UserEntity struct {
+type User struct {
 	repo UserRepo
 }
 
-func NewUserEntity(db sqlx.ExtContext) *UserEntity {
+func NewUserEntity(db sqlx.ExtContext) *User {
 	userRepo := repo.NewRepo(db, 8)
-	return &UserEntity{
+	return &User{
 		repo: userRepo,
 	}
 }
 
-func (u *UserEntity) Register(ctx context.Context, user user.User) (int64, error) {
+func (u *User) Register(ctx context.Context, user *user.User) (int64, error) {
 	id, err := u.repo.Create(ctx, user)
-	return id, errors.Wrap(err, "register new user")
+	if err != nil {
+		return -1, errors.Wrap(err, "register new user")
+	}
+	return id, nil
 }
 
-func (u *UserEntity) GetByID(ctx context.Context, id int64) (*user.User, error) {
+func (u *User) GetByID(ctx context.Context, id int64) (*user.User, error) {
 	resUser, err := u.repo.GetByID(ctx, id)
-	return resUser, errors.Wrap(err, "get user by id")
+	if err != nil {
+		return nil, errors.Wrap(err, "get user by id")
+	}
+	return resUser, nil
 }
 
-func (u *UserEntity) Login(ctx context.Context, id int64, pass string) (*user.User, error) {
+func (u *User) Login(ctx context.Context, id int64, pass string) (*user.User, error) {
 	resUser, err := u.repo.CheckPasswordByID(ctx, id, pass)
-	return resUser, errors.Wrap(err, "check password by id")
+	if err != nil {
+		return nil, errors.Wrap(err, "login user")
+	}
+	return resUser, nil
 }

@@ -334,7 +334,7 @@ func (s *Server) handleRegisterUserRequest(args [0]string, w http.ResponseWriter
 		}
 
 		type (
-			Request  = OptUserRegister
+			Request  = *UserRegister
 			Params   = struct{}
 			Response = RegisterUserRes
 		)

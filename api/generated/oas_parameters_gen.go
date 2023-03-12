@@ -17,7 +17,7 @@ import (
 
 // GetUserParams is parameters of getUser operation.
 type GetUserParams struct {
-	ID string
+	ID int64
 }
 
 func unpackGetUserParams(packed middleware.Parameters) (params GetUserParams) {
@@ -26,7 +26,7 @@ func unpackGetUserParams(packed middleware.Parameters) (params GetUserParams) {
 			Name: "id",
 			In:   "path",
 		}
-		params.ID = packed[key].(string)
+		params.ID = packed[key].(int64)
 	}
 	return params
 }
@@ -52,7 +52,7 @@ func decodeGetUserParams(args [1]string, r *http.Request) (params GetUserParams,
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToInt64(val)
 				if err != nil {
 					return err
 				}

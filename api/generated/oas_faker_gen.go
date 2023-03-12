@@ -10,7 +10,7 @@ import (
 func (s *Error5xx) SetFake() {
 	{
 		{
-			s.Code.SetFake()
+			s.Code = int(0)
 		}
 	}
 	{
@@ -49,7 +49,7 @@ func (s *Error5xxAdditionalItem) SetFake() {
 func (s *ErrorGeneric) SetFake() {
 	{
 		{
-			s.Code.SetFake()
+			s.Code = int(0)
 		}
 	}
 	{
@@ -153,19 +153,10 @@ func (s *LoginUserApplicationJSONNotFound) SetFake() {
 }
 
 // SetFake set fake values.
-func (s *OptInt) SetFake() {
-	var elem int
+func (s *OptInt32) SetFake() {
+	var elem int32
 	{
-		elem = int(0)
-	}
-	s.SetTo(elem)
-}
-
-// SetFake set fake values.
-func (s *OptInt64) SetFake() {
-	var elem int64
-	{
-		elem = int64(0)
+		elem = int32(0)
 	}
 	s.SetTo(elem)
 }
@@ -180,44 +171,35 @@ func (s *OptString) SetFake() {
 }
 
 // SetFake set fake values.
-func (s *OptUserRegister) SetFake() {
-	var elem UserRegister
-	{
-		elem.SetFake()
-	}
-	s.SetTo(elem)
-}
-
-// SetFake set fake values.
 func (s *User) SetFake() {
 	{
 		{
-			s.ID.SetFake()
+			s.ID = int64(0)
 		}
 	}
 	{
 		{
-			s.FirstName.SetFake()
+			s.FirstName = "string"
 		}
 	}
 	{
 		{
-			s.SecondName.SetFake()
+			s.SecondName = "string"
 		}
 	}
 	{
 		{
-			s.Age.SetFake()
+			s.Age = int32(0)
 		}
 	}
 	{
 		{
-			s.Biography.SetFake()
+			s.Biography = "string"
 		}
 	}
 	{
 		{
-			s.City.SetFake()
+			s.City = "string"
 		}
 	}
 }
@@ -260,7 +242,7 @@ func (s *UserRegister) SetFake() {
 func (s *UserRegisterResponse) SetFake() {
 	{
 		{
-			s.UserID.SetFake()
+			s.UserID = int64(0)
 		}
 	}
 }

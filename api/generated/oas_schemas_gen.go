@@ -17,14 +17,14 @@ func (s *CookieAuth) SetAPIKey(val string) {
 }
 
 type Error5xx struct {
-	Code            OptInt    `json:"code"`
+	Code            int       `json:"code"`
 	Message         string    `json:"message"`
 	RequestID       OptString `json:"request_id"`
 	AdditionalProps Error5xxAdditional
 }
 
 // GetCode returns the value of Code.
-func (s *Error5xx) GetCode() OptInt {
+func (s *Error5xx) GetCode() int {
 	return s.Code
 }
 
@@ -44,7 +44,7 @@ func (s *Error5xx) GetAdditionalProps() Error5xxAdditional {
 }
 
 // SetCode sets the value of Code.
-func (s *Error5xx) SetCode(val OptInt) {
+func (s *Error5xx) SetCode(val int) {
 	s.Code = val
 }
 
@@ -105,14 +105,14 @@ func (s *Error5xxHeaders) SetResponse(val Error5xx) {
 func (*Error5xxHeaders) loginUserRes() {}
 
 type ErrorGeneric struct {
-	Code            OptInt    `json:"code"`
+	Code            int       `json:"code"`
 	Message         string    `json:"message"`
 	RequestID       OptString `json:"request_id"`
 	AdditionalProps ErrorGenericAdditional
 }
 
 // GetCode returns the value of Code.
-func (s *ErrorGeneric) GetCode() OptInt {
+func (s *ErrorGeneric) GetCode() int {
 	return s.Code
 }
 
@@ -132,7 +132,7 @@ func (s *ErrorGeneric) GetAdditionalProps() ErrorGenericAdditional {
 }
 
 // SetCode sets the value of Code.
-func (s *ErrorGeneric) SetCode(val OptInt) {
+func (s *ErrorGeneric) SetCode(val int) {
 	s.Code = val
 }
 
@@ -283,38 +283,38 @@ func (o OptInt) Or(d int) int {
 	return d
 }
 
-// NewOptInt64 returns new OptInt64 with value set to v.
-func NewOptInt64(v int64) OptInt64 {
-	return OptInt64{
+// NewOptInt32 returns new OptInt32 with value set to v.
+func NewOptInt32(v int32) OptInt32 {
+	return OptInt32{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptInt64 is optional int64.
-type OptInt64 struct {
-	Value int64
+// OptInt32 is optional int32.
+type OptInt32 struct {
+	Value int32
 	Set   bool
 }
 
-// IsSet returns true if OptInt64 was set.
-func (o OptInt64) IsSet() bool { return o.Set }
+// IsSet returns true if OptInt32 was set.
+func (o OptInt32) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptInt64) Reset() {
-	var v int64
+func (o *OptInt32) Reset() {
+	var v int32
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptInt64) SetTo(v int64) {
+func (o *OptInt32) SetTo(v int32) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptInt64) Get() (v int64, ok bool) {
+func (o OptInt32) Get() (v int32, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -322,7 +322,7 @@ func (o OptInt64) Get() (v int64, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptInt64) Or(d int64) int64 {
+func (o OptInt32) Or(d int32) int32 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -375,52 +375,6 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
-// NewOptUserRegister returns new OptUserRegister with value set to v.
-func NewOptUserRegister(v UserRegister) OptUserRegister {
-	return OptUserRegister{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptUserRegister is optional UserRegister.
-type OptUserRegister struct {
-	Value UserRegister
-	Set   bool
-}
-
-// IsSet returns true if OptUserRegister was set.
-func (o OptUserRegister) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptUserRegister) Reset() {
-	var v UserRegister
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptUserRegister) SetTo(v UserRegister) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptUserRegister) Get() (v UserRegister, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptUserRegister) Or(d UserRegister) UserRegister {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 type RegisterUserApplicationJSONInternalServerError Error5xxHeaders
 
 func (*RegisterUserApplicationJSONInternalServerError) registerUserRes() {}
@@ -431,71 +385,71 @@ func (*RegisterUserApplicationJSONServiceUnavailable) registerUserRes() {}
 
 // Ref: #/components/schemas/User
 type User struct {
-	ID         OptInt64  `json:"id"`
-	FirstName  OptString `json:"first_name"`
-	SecondName OptString `json:"second_name"`
-	Age        OptInt    `json:"age"`
-	Biography  OptString `json:"biography"`
-	City       OptString `json:"city"`
+	ID         int64  `json:"id"`
+	FirstName  string `json:"first_name"`
+	SecondName string `json:"second_name"`
+	Age        int32  `json:"age"`
+	Biography  string `json:"biography"`
+	City       string `json:"city"`
 }
 
 // GetID returns the value of ID.
-func (s *User) GetID() OptInt64 {
+func (s *User) GetID() int64 {
 	return s.ID
 }
 
 // GetFirstName returns the value of FirstName.
-func (s *User) GetFirstName() OptString {
+func (s *User) GetFirstName() string {
 	return s.FirstName
 }
 
 // GetSecondName returns the value of SecondName.
-func (s *User) GetSecondName() OptString {
+func (s *User) GetSecondName() string {
 	return s.SecondName
 }
 
 // GetAge returns the value of Age.
-func (s *User) GetAge() OptInt {
+func (s *User) GetAge() int32 {
 	return s.Age
 }
 
 // GetBiography returns the value of Biography.
-func (s *User) GetBiography() OptString {
+func (s *User) GetBiography() string {
 	return s.Biography
 }
 
 // GetCity returns the value of City.
-func (s *User) GetCity() OptString {
+func (s *User) GetCity() string {
 	return s.City
 }
 
 // SetID sets the value of ID.
-func (s *User) SetID(val OptInt64) {
+func (s *User) SetID(val int64) {
 	s.ID = val
 }
 
 // SetFirstName sets the value of FirstName.
-func (s *User) SetFirstName(val OptString) {
+func (s *User) SetFirstName(val string) {
 	s.FirstName = val
 }
 
 // SetSecondName sets the value of SecondName.
-func (s *User) SetSecondName(val OptString) {
+func (s *User) SetSecondName(val string) {
 	s.SecondName = val
 }
 
 // SetAge sets the value of Age.
-func (s *User) SetAge(val OptInt) {
+func (s *User) SetAge(val int32) {
 	s.Age = val
 }
 
 // SetBiography sets the value of Biography.
-func (s *User) SetBiography(val OptString) {
+func (s *User) SetBiography(val string) {
 	s.Biography = val
 }
 
 // SetCity sets the value of City.
-func (s *User) SetCity(val OptString) {
+func (s *User) SetCity(val string) {
 	s.City = val
 }
 
@@ -505,7 +459,7 @@ func (*User) getUserRes() {}
 type UserRegister struct {
 	FirstName  string    `json:"first_name"`
 	SecondName string    `json:"second_name"`
-	Age        OptInt    `json:"age"`
+	Age        OptInt32  `json:"age"`
 	Biography  OptString `json:"biography"`
 	City       OptString `json:"city"`
 	Password   string    `json:"password"`
@@ -522,7 +476,7 @@ func (s *UserRegister) GetSecondName() string {
 }
 
 // GetAge returns the value of Age.
-func (s *UserRegister) GetAge() OptInt {
+func (s *UserRegister) GetAge() OptInt32 {
 	return s.Age
 }
 
@@ -552,7 +506,7 @@ func (s *UserRegister) SetSecondName(val string) {
 }
 
 // SetAge sets the value of Age.
-func (s *UserRegister) SetAge(val OptInt) {
+func (s *UserRegister) SetAge(val OptInt32) {
 	s.Age = val
 }
 
@@ -573,16 +527,16 @@ func (s *UserRegister) SetPassword(val string) {
 
 // Ref: #/components/schemas/UserRegisterResponse
 type UserRegisterResponse struct {
-	UserID OptInt64 `json:"user_id"`
+	UserID int64 `json:"user_id"`
 }
 
 // GetUserID returns the value of UserID.
-func (s *UserRegisterResponse) GetUserID() OptInt64 {
+func (s *UserRegisterResponse) GetUserID() int64 {
 	return s.UserID
 }
 
 // SetUserID sets the value of UserID.
-func (s *UserRegisterResponse) SetUserID(val OptInt64) {
+func (s *UserRegisterResponse) SetUserID(val int64) {
 	s.UserID = val
 }
 

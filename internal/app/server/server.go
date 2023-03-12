@@ -20,13 +20,16 @@ import (
 	"github.com/vmedinskiy/highload/internal/pkg/config"
 	"github.com/vmedinskiy/highload/internal/pkg/database"
 	"github.com/vmedinskiy/highload/internal/pkg/dbutils"
+	"github.com/vmedinskiy/highload/internal/pkg/jwt"
 	"github.com/vmedinskiy/highload/internal/pkg/log"
+	"github.com/vmedinskiy/highload/internal/pkg/user/entity"
 )
 
 type Server struct {
-	server *http.Server
-	config *config.Config
-	db     *sqlx.DB
+	server     *http.Server
+	config     *config.Config
+	JWTManager *jwt.Manager
+	db         *sqlx.DB
 }
 
 func RunCmd(cmd *cobra.Command, _ []string) error {
@@ -96,12 +99,19 @@ func (s *Server) initDB() {
 }
 
 func (s *Server) checkDBStructure() error {
-	/*q := ``
+	q := `create table if not exists public.users (
+			first_name varchar(1024) not null,
+			second_name varchar(1024) not null,
+			age int8 null,
+			biography varchar(1024) null,
+			city varchar(1024) null,
+			pwdhsh bytea null,
+			id bigserial not null
+		);`
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	args := make(map[string]any)
-	return dbutils.NamedExec(ctx, s.db, q, args)*/
-	return nil
+	return dbutils.NamedExec(ctx, s.db, q, args)
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
@@ -126,15 +136,18 @@ func newServer(cfg *config.Config) *Server {
 		config: cfg,
 	}
 
-	// returningServer.initToken()
 	// returningServer.setupGlobalMiddleware(r)
-	returningServer.setupHandlers(r)
 	returningServer.initDB()
+	returningServer.setupHandlers(r)
 	return returningServer
 }
 
 func (s *Server) setupHandlers(r *chi.Mux) {
-	apiHandler, err := api.NewServer(handlers.NewServerHandler(), nil)
+	userEntity := entity.NewUserEntity(s.db)
+	jwtManager := jwt.NewManager(s.config.SecretKey, s.config.TokenDuration)
+	apiHandler, err := api.NewServer(
+		handlers.NewServerHandler(userEntity, jwtManager),
+		handlers.NewSecHandler(userEntity, jwtManager))
 	if err != nil {
 		log.L().Fatal(err)
 	}
