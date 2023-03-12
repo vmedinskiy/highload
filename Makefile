@@ -6,7 +6,7 @@ LDFLAGS=-ldflags "-v -w -s -X 'github.com/vmedinskiy/highload/internal/cmd/serve
 	-X 'github.com/vmedinskiy/highload/internal/cmd/server.buildDate=${DATE}' \
 	-X 'github.com/vmedinskiy/highload/internal/cmd/server.buildCommit=${COMMIT}'"
 
-BUILD        ?= go build      -o ./cmd/bin/socnet            ${LDFLAGS_SERVER} ./cmd/*.go
+BUILD        ?= go build      -o ./bin/socnet            ${LDFLAGS} ./cmd/*.go
 
 
 clean-generate:
@@ -23,3 +23,16 @@ build_bin:
 
 .PHONY: build
 build: generate build_bin
+
+.PHONY: docker_up
+docker:
+	docker-compose -f build/docker-compose.yml up --build
+
+.PHONY: docker_up_d
+docker_up_d:
+	docker-compose -f build/docker-compose.yml up --build -d
+
+.PHONY: docker_down
+docker_down:
+	docker-compose -f build/docker-compose.yml down
+	docker volume prune -f

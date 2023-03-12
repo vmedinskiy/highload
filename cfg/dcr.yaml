@@ -1,0 +1,7 @@
+port: 8080
+secretKey: secret
+tokenDuration: 8760h
+loglevel: 2
+databaseuri: postgres://hgh:hgh@db:5432/hgh?sslmode=disable
+dbMaxOpenConns: 10
+dbMaxIdleConns: 10
