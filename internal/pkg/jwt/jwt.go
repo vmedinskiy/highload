@@ -37,7 +37,10 @@ func (manager *Manager) Generate(user *user.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ss, err := token.SignedString([]byte(manager.secretKey))
-	return ss, errors.Wrap(err, "generate token")
+	if err != nil {
+		return "", errors.Wrap(err, "generate jwt token")
+	}
+	return ss, nil
 }
 
 // Verify verifies the access token string and return a user claim if the token is valid

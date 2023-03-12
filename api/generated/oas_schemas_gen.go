@@ -227,7 +227,33 @@ func (s *LoginResponse) SetToken(val string) {
 	s.Token = val
 }
 
-func (*LoginResponse) loginUserRes() {}
+// LoginResponseHeaders wraps LoginResponse with response headers.
+type LoginResponseHeaders struct {
+	SetCookie string
+	Response  LoginResponse
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *LoginResponseHeaders) GetSetCookie() string {
+	return s.SetCookie
+}
+
+// GetResponse returns the value of Response.
+func (s *LoginResponseHeaders) GetResponse() LoginResponse {
+	return s.Response
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *LoginResponseHeaders) SetSetCookie(val string) {
+	s.SetCookie = val
+}
+
+// SetResponse sets the value of Response.
+func (s *LoginResponseHeaders) SetResponse(val LoginResponse) {
+	s.Response = val
+}
+
+func (*LoginResponseHeaders) loginUserRes() {}
 
 type LoginUserApplicationJSONBadRequest ErrorGeneric
 

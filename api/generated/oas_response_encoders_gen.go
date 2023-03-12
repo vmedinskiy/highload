@@ -133,13 +133,29 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 
 func encodeLoginUserResponse(response LoginUserRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
-	case *LoginResponse:
+	case *LoginResponseHeaders:
 		w.Header().Set("Content-Type", "application/json")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Set-Cookie" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Set-Cookie",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					return e.EncodeValue(conv.StringToString(response.SetCookie))
+				}); err != nil {
+					return errors.Wrap(err, "encode Set-Cookie header")
+				}
+			}
+		}
 		w.WriteHeader(200)
 		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := jx.GetEncoder()
-		response.Encode(e)
+		response.Response.Encode(e)
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}

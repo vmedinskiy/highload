@@ -3,7 +3,7 @@ POST http://localhost:8080/api/login
 Content-Type: application/json
 
 {
-  "id": 123,
+  "id": 11,
   "password": "123"
 }
 
@@ -21,4 +21,4 @@ Content-Type: application/json
 }
 
 ###
-GET http://localhost:8080/api/user/get/1
+GET http://localhost:8080/api/user/get/11

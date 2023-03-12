@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	CtxIsEmptyErr     = errors.New("empty context")
-	CtxWithoutUserErr = errors.Errorf("context does not contain %q", ContextUserKey)
+	ErrCtxIsEmpty     = errors.New("empty context")
+	ErrCtxWithoutUser = errors.Errorf("context does not contain %q", ContextUserKey)
 )
 
 func wrapFuncName(err error, skip int) error {

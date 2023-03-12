@@ -167,9 +167,11 @@ paths:
               $ref: '#/components/schemas/LoginInput'
       responses:
         '200':
-          description: success auth
+          description:  Successfully authenticated.
+            The session ID is returned in a cookie named `xsession`. You need to include this cookie in subsequent requests.
           headers:
             Set-Cookie:
+              required: true
               schema:
                 type: string
                 example: xsession=abcde12345; Path=/; HttpOnly

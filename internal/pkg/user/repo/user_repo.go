@@ -58,7 +58,7 @@ func (r *Repo) GetByID(ctx context.Context, id int64) (*user.User, error) {
 	err := dbutils.NamedGet(ctx, r.DB, dest, q, args)
 	switch {
 	case err != nil && errors.Is(err, sql.ErrNoRows):
-		return nil, httperr.Wrap(errorBadLoginPassword, http.StatusNotFound)
+		return nil, httperr.Wrap(errors.Errorf("no user with id %d", id), http.StatusNotFound)
 	case err != nil:
 		return nil, errors.Wrap(err, "getting user by id")
 	}

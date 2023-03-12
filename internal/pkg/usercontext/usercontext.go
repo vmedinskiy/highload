@@ -40,12 +40,12 @@ func GetUser(ctx context.Context) (u User, err error) {
 	defer func() { err = wrapFuncName(err, 1) }()
 
 	if ctx == nil {
-		return User{}, CtxIsEmptyErr
+		return User{}, ErrCtxIsEmpty
 	}
 
 	cuk := ctx.Value(ContextUserKey)
 	if cuk == nil {
-		return User{}, CtxWithoutUserErr
+		return User{}, ErrCtxWithoutUser
 	}
 
 	switch cuk := cuk.(type) {

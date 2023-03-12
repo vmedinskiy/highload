@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"time"
 
 	api "github.com/vmedinskiy/highload/api/generated"
 	"github.com/vmedinskiy/highload/internal/pkg/user"
@@ -32,8 +34,19 @@ func (s *ServerHandler) LoginUser(ctx context.Context, req *api.LoginInput) (api
 	if err != nil {
 		return loginError(ctx, err), nil
 	}
-	return &api.LoginResponse{
-		Token: t,
+	cookie := http.Cookie{
+		Name:     "xsession",
+		Value:    t,
+		Expires:  time.Now().Add(time.Hour * 24 * 30),
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	return &api.LoginResponseHeaders{
+		Response: api.LoginResponse{
+			Token: t,
+		},
+		SetCookie: cookie.String(),
 	}, nil
 }
 
