@@ -22,3 +22,7 @@ Content-Type: application/json
 
 ###
 GET http://localhost:8080/api/user/get/5
+
+#hey -c 10 -n 1000 -m POST -H "Content-Type: application/json" -d '{"first_name": "f", "second_name": "s", "age": 22, "password": "123"}' http://localhost:8080/api/user/register
+
+#hey -c 100 -n 10000 -m GET -H "Cookie: xsession=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTAyMzQ1MDAsImlhdCI6MTY3ODY5ODUwMCwidXNlcklEIjoxfQ.A0qvjQXmzuLpHdy5IjtTYEJLRfjHMOdYROEdUsZ8fjA; Expires=Wed, 12 Apr 2023 09:08:20 GMT; HttpOnly; Secure; SameSite=Strict" http://localhost:8080/api/user/get/10
