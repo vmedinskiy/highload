@@ -28,11 +28,11 @@ func NewSecHandler(userEntity UserEntity, jwtManager *jwt.Manager) *SecHandler {
 func (sc *SecHandler) HandleCookieAuth(ctx context.Context, _ string, t api.CookieAuth) (context.Context, error) {
 	id, err := sc.jwtManager.Verify(t.GetAPIKey())
 	if err != nil {
-		return ctx, errors.Wrap(err, "")
+		return ctx, errors.Wrap(err, "hanlde cookie auth")
 	}
 	u, err := sc.userEntity.GetByID(ctx, id)
 	if err != nil {
-		return ctx, errors.Wrap(err, "get user during cookie handle")
+		return ctx, errors.Wrap(err, "get user during cookie handle auth")
 	}
 	usr := usercontext.User{
 		ID:         u.ID,

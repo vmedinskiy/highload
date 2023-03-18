@@ -34,7 +34,7 @@ func registerUserError(ctx context.Context, err error) api.RegisterUserRes {
 	}
 	return &api.RegisterUserApplicationJSONInternalServerError{}
 }
-func loginError(ctx context.Context, err error) api.LoginUserRes {
+func loginUserError(ctx context.Context, err error) api.LoginUserRes {
 	errResp := httperr.ToErrorResponder(err)
 	switch errResp.Code {
 	case http.StatusInternalServerError:

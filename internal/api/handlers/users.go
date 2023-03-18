@@ -28,11 +28,11 @@ func (s *ServerHandler) GetUser(ctx context.Context, params api.GetUserParams) (
 func (s *ServerHandler) LoginUser(ctx context.Context, req *api.LoginInput) (api.LoginUserRes, error) {
 	u, err := s.userEntity.Login(ctx, req.ID, req.Password)
 	if err != nil {
-		return loginError(ctx, err), nil
+		return loginUserError(ctx, err), nil
 	}
 	t, err := s.jwtManager.Generate(u)
 	if err != nil {
-		return loginError(ctx, err), nil
+		return loginUserError(ctx, err), nil
 	}
 	cookie := http.Cookie{
 		Name:     "xsession",

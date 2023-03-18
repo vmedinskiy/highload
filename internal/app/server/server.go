@@ -111,7 +111,11 @@ func (s *Server) checkDBStructure() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	args := make(map[string]any)
-	return dbutils.NamedExec(ctx, s.db, q, args)
+	err := dbutils.NamedExec(ctx, s.db, q, args)
+	if err != nil {
+		return errors.Wrap(err, "check db structure")
+	}
+	return nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
