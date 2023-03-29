@@ -66,3 +66,22 @@ func (s *ServerHandler) RegisterUser(ctx context.Context, req *api.UserRegister)
 
 	return &api.UserRegisterResponse{UserID: id}, nil
 }
+
+func (s *ServerHandler) UserSearchGet(ctx context.Context, params api.UserSearchGetParams) (api.UserSearchGetRes, error) {
+	res, err := s.userEntity.Search(ctx, params.FirstName, params.LastName)
+	if err != nil {
+		return userSearchError(ctx, err), nil
+	}
+	result := make(api.Users, len(res))
+	for i, u := range res {
+		result[i] = api.User{
+			ID:         u.ID,
+			FirstName:  u.FirstName,
+			SecondName: u.SecondName,
+			Age:        u.Age.Int32,
+			Biography:  u.Biography.String,
+			City:       u.City.String,
+		}
+	}
+	return &result, nil
+}

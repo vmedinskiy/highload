@@ -34,6 +34,7 @@ func registerUserError(ctx context.Context, err error) api.RegisterUserRes {
 	}
 	return &api.RegisterUserApplicationJSONInternalServerError{}
 }
+
 func loginUserError(ctx context.Context, err error) api.LoginUserRes {
 	errResp := httperr.ToErrorResponder(err)
 	switch errResp.Code {
@@ -45,4 +46,15 @@ func loginUserError(ctx context.Context, err error) api.LoginUserRes {
 		return (*api.LoginUserApplicationJSONNotFound)(httperr.ApiErrorGeneric(ctx, errResp))
 	}
 	return &api.Error5xxHeaders{}
+}
+
+func userSearchError(ctx context.Context, err error) api.UserSearchGetRes {
+	errResp := httperr.ToErrorResponder(err)
+	switch errResp.Code {
+	case http.StatusBadRequest:
+		return httperr.ApiErrorGeneric(ctx, errResp)
+	case http.StatusInternalServerError, http.StatusServiceUnavailable:
+		return (*api.UserSearchGetApplicationJSONInternalServerError)(httperr.ApiError5xx(ctx, errResp))
+	}
+	return &api.UserSearchGetApplicationJSONInternalServerError{}
 }

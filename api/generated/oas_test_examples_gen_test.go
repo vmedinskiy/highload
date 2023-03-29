@@ -207,3 +207,15 @@ func TestUserRegisterResponse_EncodeDecode(t *testing.T) {
 	var typ2 UserRegisterResponse
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
+func TestUsers_EncodeDecode(t *testing.T) {
+	var typ Users
+	typ.SetFake()
+
+	e := jx.Encoder{}
+	typ.Encode(&e)
+	data := e.Bytes()
+	require.True(t, std.Valid(data), "Encoded: %s", data)
+
+	var typ2 Users
+	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
+}

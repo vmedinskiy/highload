@@ -246,3 +246,19 @@ func (s *UserRegisterResponse) SetFake() {
 		}
 	}
 }
+
+// SetFake set fake values.
+func (s *Users) SetFake() {
+	var unwrapped []User
+	{
+		unwrapped = nil
+		for i := 0; i < 0; i++ {
+			var elem User
+			{
+				elem.SetFake()
+			}
+			unwrapped = append(unwrapped, elem)
+		}
+	}
+	*s = Users(unwrapped)
+}

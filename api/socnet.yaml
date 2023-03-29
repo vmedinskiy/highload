@@ -69,6 +69,10 @@ components:
           type: integer
           format: int64
           x-ogen-name: UserId
+    Users:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
     User:
       type: object
       required:
@@ -167,7 +171,7 @@ paths:
               $ref: '#/components/schemas/LoginInput'
       responses:
         '200':
-          description:  Successfully authenticated.
+          description: Successfully authenticated.
             The session ID is returned in a cookie named `xsession`. You need to include this cookie in subsequent requests.
           headers:
             Set-Cookie:
@@ -234,6 +238,39 @@ paths:
         "404":
           $ref: '#/components/responses/ErrorGeneric'
         "401":
+          $ref: '#/components/responses/ErrorGeneric'
+        "500":
+          $ref: '#/components/responses/Error5xx'
+        "503":
+          $ref: '#/components/responses/Error5xx'
+  /user/search:
+    get:
+      security:
+        - cookieAuth: []
+      description: "Поиск анкет"
+      parameters:
+        - name: first_name
+          schema:
+            type: string
+            description: "Часть имени для поиска"
+            example: "Конст"
+          in: query
+          required: true
+        - name: last_name
+          schema:
+            type: string
+            description: "Часть фамилии для поиска"
+            example: "Оси"
+          in: query
+          required: true
+      responses:
+        '200':
+          description: success get user details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+        "400":
           $ref: '#/components/responses/ErrorGeneric'
         "500":
           $ref: '#/components/responses/Error5xx'

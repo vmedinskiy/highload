@@ -12,3 +12,7 @@ type LoginUserRes interface {
 type RegisterUserRes interface {
 	registerUserRes()
 }
+
+type UserSearchGetRes interface {
+	userSearchGetRes()
+}

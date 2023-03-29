@@ -39,3 +39,12 @@ func (UnimplementedHandler) LoginUser(ctx context.Context, req *LoginInput) (r L
 func (UnimplementedHandler) RegisterUser(ctx context.Context, req *UserRegister) (r RegisterUserRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
+
+// UserSearchGet implements GET /user/search operation.
+//
+// Поиск анкет.
+//
+// GET /user/search
+func (UnimplementedHandler) UserSearchGet(ctx context.Context, params UserSearchGetParams) (r UserSearchGetRes, _ error) {
+	return r, ht.ErrNotImplemented
+}

@@ -14,6 +14,7 @@ type UserRepo interface {
 	Create(ctx context.Context, user *user.User) (int64, error)
 	GetByID(ctx context.Context, id int64) (*user.User, error)
 	CheckPasswordByID(ctx context.Context, id int64, pass string) (*user.User, error)
+	Search(ctx context.Context, firstName, secondName string) ([]*user.User, error)
 }
 
 type User struct {
@@ -49,4 +50,12 @@ func (u *User) Login(ctx context.Context, id int64, pass string) (*user.User, er
 		return nil, errors.Wrap(err, "login user")
 	}
 	return resUser, nil
+}
+
+func (u *User) Search(ctx context.Context, firstName, lastName string) ([]*user.User, error) {
+	res, err := u.repo.Search(ctx, firstName, lastName)
+	if err != nil {
+		return nil, errors.Wrap(err, "search users")
+	}
+	return res, nil
 }

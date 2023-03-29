@@ -65,6 +65,39 @@ func (r *Repo) GetByID(ctx context.Context, id int64) (*user.User, error) {
 	return dest, nil
 }
 
+func (r *Repo) Search(ctx context.Context, firstName, secondName string) ([]*user.User, error) {
+	if firstName == "" && secondName == "" {
+		return nil, httperr.Wrap(errors.New("no conditions to search"), http.StatusBadRequest)
+	}
+	var searchConds string
+	if firstName != "" {
+		firstName += "%"
+	}
+	if secondName != "" {
+		secondName += "%"
+	}
+	args := map[string]any{}
+	switch {
+	case firstName != "" && secondName != "":
+		args["firstName"] = firstName
+		args["secondName"] = secondName
+		searchConds = "where first_name like :firstName and second_name like :secondName"
+	case firstName == "" && secondName != "":
+		args["secondName"] = secondName
+		searchConds = "where second_name like :secondName"
+	case firstName != "" && secondName == "":
+		args["firstName"] = firstName
+		searchConds = "where first_name like :firstName"
+	}
+	q := `select id, first_name, second_name, age, biography, city, pwdhsh from public.users ` + searchConds
+	var dest []*user.User
+	err := dbutils.NamedSelect(ctx, r.DB, &dest, q, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "searching users")
+	}
+	return dest, nil
+}
+
 func (r *Repo) makeSalt() []byte {
 	salt := make([]byte, r.saltLn)
 	_, _ = rand.Read(salt)

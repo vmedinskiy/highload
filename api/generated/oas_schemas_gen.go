@@ -151,7 +151,8 @@ func (s *ErrorGeneric) SetAdditionalProps(val ErrorGenericAdditional) {
 	s.AdditionalProps = val
 }
 
-func (*ErrorGeneric) registerUserRes() {}
+func (*ErrorGeneric) registerUserRes()  {}
+func (*ErrorGeneric) userSearchGetRes() {}
 
 type ErrorGenericAdditional map[string]ErrorGenericAdditionalItem
 
@@ -567,3 +568,15 @@ func (s *UserRegisterResponse) SetUserID(val int64) {
 }
 
 func (*UserRegisterResponse) registerUserRes() {}
+
+type UserSearchGetApplicationJSONInternalServerError Error5xxHeaders
+
+func (*UserSearchGetApplicationJSONInternalServerError) userSearchGetRes() {}
+
+type UserSearchGetApplicationJSONServiceUnavailable Error5xxHeaders
+
+func (*UserSearchGetApplicationJSONServiceUnavailable) userSearchGetRes() {}
+
+type Users []User
+
+func (*Users) userSearchGetRes() {}

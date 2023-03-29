@@ -15,6 +15,7 @@ type UserEntity interface {
 	Register(ctx context.Context, user *user.User) (int64, error)
 	GetByID(ctx context.Context, id int64) (*user.User, error)
 	Login(ctx context.Context, id int64, pass string) (*user.User, error)
+	Search(ctx context.Context, firstName, lastName string) ([]*user.User, error)
 }
 
 type ServerHandler struct {
