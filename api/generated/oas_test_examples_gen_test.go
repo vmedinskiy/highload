@@ -87,8 +87,8 @@ func TestErrorGenericAdditionalItem_EncodeDecode(t *testing.T) {
 	var typ2 ErrorGenericAdditionalItem
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
-func TestGetUserApplicationJSONBadRequest_EncodeDecode(t *testing.T) {
-	var typ GetUserApplicationJSONBadRequest
+func TestGetUserBadRequest_EncodeDecode(t *testing.T) {
+	var typ GetUserBadRequest
 	typ.SetFake()
 
 	e := jx.Encoder{}
@@ -96,11 +96,11 @@ func TestGetUserApplicationJSONBadRequest_EncodeDecode(t *testing.T) {
 	data := e.Bytes()
 	require.True(t, std.Valid(data), "Encoded: %s", data)
 
-	var typ2 GetUserApplicationJSONBadRequest
+	var typ2 GetUserBadRequest
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
-func TestGetUserApplicationJSONNotFound_EncodeDecode(t *testing.T) {
-	var typ GetUserApplicationJSONNotFound
+func TestGetUserNotFound_EncodeDecode(t *testing.T) {
+	var typ GetUserNotFound
 	typ.SetFake()
 
 	e := jx.Encoder{}
@@ -108,11 +108,11 @@ func TestGetUserApplicationJSONNotFound_EncodeDecode(t *testing.T) {
 	data := e.Bytes()
 	require.True(t, std.Valid(data), "Encoded: %s", data)
 
-	var typ2 GetUserApplicationJSONNotFound
+	var typ2 GetUserNotFound
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
-func TestGetUserApplicationJSONUnauthorized_EncodeDecode(t *testing.T) {
-	var typ GetUserApplicationJSONUnauthorized
+func TestGetUserUnauthorized_EncodeDecode(t *testing.T) {
+	var typ GetUserUnauthorized
 	typ.SetFake()
 
 	e := jx.Encoder{}
@@ -120,7 +120,7 @@ func TestGetUserApplicationJSONUnauthorized_EncodeDecode(t *testing.T) {
 	data := e.Bytes()
 	require.True(t, std.Valid(data), "Encoded: %s", data)
 
-	var typ2 GetUserApplicationJSONUnauthorized
+	var typ2 GetUserUnauthorized
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
 func TestLoginInput_EncodeDecode(t *testing.T) {
@@ -147,8 +147,8 @@ func TestLoginResponse_EncodeDecode(t *testing.T) {
 	var typ2 LoginResponse
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
-func TestLoginUserApplicationJSONBadRequest_EncodeDecode(t *testing.T) {
-	var typ LoginUserApplicationJSONBadRequest
+func TestLoginUserBadRequest_EncodeDecode(t *testing.T) {
+	var typ LoginUserBadRequest
 	typ.SetFake()
 
 	e := jx.Encoder{}
@@ -156,11 +156,11 @@ func TestLoginUserApplicationJSONBadRequest_EncodeDecode(t *testing.T) {
 	data := e.Bytes()
 	require.True(t, std.Valid(data), "Encoded: %s", data)
 
-	var typ2 LoginUserApplicationJSONBadRequest
+	var typ2 LoginUserBadRequest
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
-func TestLoginUserApplicationJSONNotFound_EncodeDecode(t *testing.T) {
-	var typ LoginUserApplicationJSONNotFound
+func TestLoginUserNotFound_EncodeDecode(t *testing.T) {
+	var typ LoginUserNotFound
 	typ.SetFake()
 
 	e := jx.Encoder{}
@@ -168,7 +168,7 @@ func TestLoginUserApplicationJSONNotFound_EncodeDecode(t *testing.T) {
 	data := e.Bytes()
 	require.True(t, std.Valid(data), "Encoded: %s", data)
 
-	var typ2 LoginUserApplicationJSONNotFound
+	var typ2 LoginUserNotFound
 	require.NoError(t, typ2.Decode(jx.DecodeBytes(data)))
 }
 func TestUser_EncodeDecode(t *testing.T) {

@@ -167,25 +167,25 @@ func (s *ErrorGenericAdditional) init() ErrorGenericAdditional {
 
 type ErrorGenericAdditionalItem struct{}
 
-type GetUserApplicationJSONBadRequest ErrorGeneric
+type GetUserBadRequest ErrorGeneric
 
-func (*GetUserApplicationJSONBadRequest) getUserRes() {}
+func (*GetUserBadRequest) getUserRes() {}
 
-type GetUserApplicationJSONInternalServerError Error5xxHeaders
+type GetUserInternalServerError Error5xxHeaders
 
-func (*GetUserApplicationJSONInternalServerError) getUserRes() {}
+func (*GetUserInternalServerError) getUserRes() {}
 
-type GetUserApplicationJSONNotFound ErrorGeneric
+type GetUserNotFound ErrorGeneric
 
-func (*GetUserApplicationJSONNotFound) getUserRes() {}
+func (*GetUserNotFound) getUserRes() {}
 
-type GetUserApplicationJSONServiceUnavailable Error5xxHeaders
+type GetUserServiceUnavailable Error5xxHeaders
 
-func (*GetUserApplicationJSONServiceUnavailable) getUserRes() {}
+func (*GetUserServiceUnavailable) getUserRes() {}
 
-type GetUserApplicationJSONUnauthorized ErrorGeneric
+type GetUserUnauthorized ErrorGeneric
 
-func (*GetUserApplicationJSONUnauthorized) getUserRes() {}
+func (*GetUserUnauthorized) getUserRes() {}
 
 // Ref: #/components/schemas/LoginInput
 type LoginInput struct {
@@ -256,13 +256,13 @@ func (s *LoginResponseHeaders) SetResponse(val LoginResponse) {
 
 func (*LoginResponseHeaders) loginUserRes() {}
 
-type LoginUserApplicationJSONBadRequest ErrorGeneric
+type LoginUserBadRequest ErrorGeneric
 
-func (*LoginUserApplicationJSONBadRequest) loginUserRes() {}
+func (*LoginUserBadRequest) loginUserRes() {}
 
-type LoginUserApplicationJSONNotFound ErrorGeneric
+type LoginUserNotFound ErrorGeneric
 
-func (*LoginUserApplicationJSONNotFound) loginUserRes() {}
+func (*LoginUserNotFound) loginUserRes() {}
 
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {
@@ -402,13 +402,13 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
-type RegisterUserApplicationJSONInternalServerError Error5xxHeaders
+type RegisterUserInternalServerError Error5xxHeaders
 
-func (*RegisterUserApplicationJSONInternalServerError) registerUserRes() {}
+func (*RegisterUserInternalServerError) registerUserRes() {}
 
-type RegisterUserApplicationJSONServiceUnavailable Error5xxHeaders
+type RegisterUserServiceUnavailable Error5xxHeaders
 
-func (*RegisterUserApplicationJSONServiceUnavailable) registerUserRes() {}
+func (*RegisterUserServiceUnavailable) registerUserRes() {}
 
 // Ref: #/components/schemas/User
 type User struct {
@@ -569,13 +569,13 @@ func (s *UserRegisterResponse) SetUserID(val int64) {
 
 func (*UserRegisterResponse) registerUserRes() {}
 
-type UserSearchGetApplicationJSONInternalServerError Error5xxHeaders
+type UserSearchGetInternalServerError Error5xxHeaders
 
-func (*UserSearchGetApplicationJSONInternalServerError) userSearchGetRes() {}
+func (*UserSearchGetInternalServerError) userSearchGetRes() {}
 
-type UserSearchGetApplicationJSONServiceUnavailable Error5xxHeaders
+type UserSearchGetServiceUnavailable Error5xxHeaders
 
-func (*UserSearchGetApplicationJSONServiceUnavailable) userSearchGetRes() {}
+func (*UserSearchGetServiceUnavailable) userSearchGetRes() {}
 
 type Users []User
 

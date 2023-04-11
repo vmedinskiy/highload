@@ -85,30 +85,30 @@ func (s *ErrorGenericAdditionalItem) SetFake() {
 }
 
 // SetFake set fake values.
-func (s *GetUserApplicationJSONBadRequest) SetFake() {
+func (s *GetUserBadRequest) SetFake() {
 	var unwrapped ErrorGeneric
 	{
 		unwrapped.SetFake()
 	}
-	*s = GetUserApplicationJSONBadRequest(unwrapped)
+	*s = GetUserBadRequest(unwrapped)
 }
 
 // SetFake set fake values.
-func (s *GetUserApplicationJSONNotFound) SetFake() {
+func (s *GetUserNotFound) SetFake() {
 	var unwrapped ErrorGeneric
 	{
 		unwrapped.SetFake()
 	}
-	*s = GetUserApplicationJSONNotFound(unwrapped)
+	*s = GetUserNotFound(unwrapped)
 }
 
 // SetFake set fake values.
-func (s *GetUserApplicationJSONUnauthorized) SetFake() {
+func (s *GetUserUnauthorized) SetFake() {
 	var unwrapped ErrorGeneric
 	{
 		unwrapped.SetFake()
 	}
-	*s = GetUserApplicationJSONUnauthorized(unwrapped)
+	*s = GetUserUnauthorized(unwrapped)
 }
 
 // SetFake set fake values.
@@ -135,21 +135,21 @@ func (s *LoginResponse) SetFake() {
 }
 
 // SetFake set fake values.
-func (s *LoginUserApplicationJSONBadRequest) SetFake() {
+func (s *LoginUserBadRequest) SetFake() {
 	var unwrapped ErrorGeneric
 	{
 		unwrapped.SetFake()
 	}
-	*s = LoginUserApplicationJSONBadRequest(unwrapped)
+	*s = LoginUserBadRequest(unwrapped)
 }
 
 // SetFake set fake values.
-func (s *LoginUserApplicationJSONNotFound) SetFake() {
+func (s *LoginUserNotFound) SetFake() {
 	var unwrapped ErrorGeneric
 	{
 		unwrapped.SetFake()
 	}
-	*s = LoginUserApplicationJSONNotFound(unwrapped)
+	*s = LoginUserNotFound(unwrapped)
 }
 
 // SetFake set fake values.

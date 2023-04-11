@@ -28,7 +28,7 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
-	case *GetUserApplicationJSONBadRequest:
+	case *GetUserBadRequest:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(400)
 		span.SetStatus(codes.Error, http.StatusText(400))
@@ -40,7 +40,7 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
-	case *GetUserApplicationJSONUnauthorized:
+	case *GetUserUnauthorized:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
@@ -52,7 +52,7 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
-	case *GetUserApplicationJSONNotFound:
+	case *GetUserNotFound:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(404)
 		span.SetStatus(codes.Error, http.StatusText(404))
@@ -64,7 +64,7 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
-	case *GetUserApplicationJSONInternalServerError:
+	case *GetUserInternalServerError:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{
@@ -95,7 +95,7 @@ func encodeGetUserResponse(response GetUserRes, w http.ResponseWriter, span trac
 		}
 		return nil
 
-	case *GetUserApplicationJSONServiceUnavailable:
+	case *GetUserServiceUnavailable:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{
@@ -161,7 +161,7 @@ func encodeLoginUserResponse(response LoginUserRes, w http.ResponseWriter, span 
 		}
 		return nil
 
-	case *LoginUserApplicationJSONBadRequest:
+	case *LoginUserBadRequest:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(400)
 		span.SetStatus(codes.Error, http.StatusText(400))
@@ -173,7 +173,7 @@ func encodeLoginUserResponse(response LoginUserRes, w http.ResponseWriter, span 
 		}
 		return nil
 
-	case *LoginUserApplicationJSONNotFound:
+	case *LoginUserNotFound:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(404)
 		span.SetStatus(codes.Error, http.StatusText(404))
@@ -247,7 +247,7 @@ func encodeRegisterUserResponse(response RegisterUserRes, w http.ResponseWriter,
 		}
 		return nil
 
-	case *RegisterUserApplicationJSONInternalServerError:
+	case *RegisterUserInternalServerError:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{
@@ -278,7 +278,7 @@ func encodeRegisterUserResponse(response RegisterUserRes, w http.ResponseWriter,
 		}
 		return nil
 
-	case *RegisterUserApplicationJSONServiceUnavailable:
+	case *RegisterUserServiceUnavailable:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{
@@ -340,7 +340,7 @@ func encodeUserSearchGetResponse(response UserSearchGetRes, w http.ResponseWrite
 		}
 		return nil
 
-	case *UserSearchGetApplicationJSONInternalServerError:
+	case *UserSearchGetInternalServerError:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{
@@ -371,7 +371,7 @@ func encodeUserSearchGetResponse(response UserSearchGetRes, w http.ResponseWrite
 		}
 		return nil
 
-	case *UserSearchGetApplicationJSONServiceUnavailable:
+	case *UserSearchGetServiceUnavailable:
 		w.Header().Set("Content-Type", "application/json")
 		// Encoding response headers.
 		{

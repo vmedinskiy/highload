@@ -22,7 +22,7 @@ import (
 // Get user details by id.
 //
 // GET /user/get/{id}
-func (s *Server) handleGetUserRequest(args [1]string, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleGetUserRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getUser"),
 		semconv.HTTPMethodKey.String("GET"),
@@ -102,7 +102,7 @@ func (s *Server) handleGetUserRequest(args [1]string, w http.ResponseWriter, r *
 			return
 		}
 	}
-	params, err := decodeGetUserParams(args, r)
+	params, err := decodeGetUserParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -168,7 +168,7 @@ func (s *Server) handleGetUserRequest(args [1]string, w http.ResponseWriter, r *
 // Simplified user auth process post userID receive token.
 //
 // POST /login
-func (s *Server) handleLoginUserRequest(args [0]string, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleLoginUserRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("loginUser"),
 		semconv.HTTPMethodKey.String("POST"),
@@ -270,7 +270,7 @@ func (s *Server) handleLoginUserRequest(args [0]string, w http.ResponseWriter, r
 // New user register.
 //
 // POST /user/register
-func (s *Server) handleRegisterUserRequest(args [0]string, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleRegisterUserRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("registerUser"),
 		semconv.HTTPMethodKey.String("POST"),
@@ -372,7 +372,7 @@ func (s *Server) handleRegisterUserRequest(args [0]string, w http.ResponseWriter
 // Поиск анкет.
 //
 // GET /user/search
-func (s *Server) handleUserSearchGetRequest(args [0]string, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleUserSearchGetRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	var otelAttrs []attribute.KeyValue
 
 	// Start a span for this request.
@@ -447,7 +447,7 @@ func (s *Server) handleUserSearchGetRequest(args [0]string, w http.ResponseWrite
 			return
 		}
 	}
-	params, err := decodeUserSearchGetParams(args, r)
+	params, err := decodeUserSearchGetParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
