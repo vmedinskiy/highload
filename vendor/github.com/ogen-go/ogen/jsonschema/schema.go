@@ -31,6 +31,14 @@ const (
 // Ref is a JSON Schema reference.
 type Ref = jsonpointer.RefKey
 
+// XProperty defines per-property extensions fields.
+type XProperty struct {
+	// Name is a property Go name to override.
+	Name *string `json:"name" yaml:"name"`
+
+	location.Pointer `json:"-" yaml:"-"`
+}
+
 // Schema is a JSON Schema.
 type Schema struct {
 	XOgenName string // Annotation to set type name.
@@ -106,6 +114,8 @@ type Property struct {
 	Description string  // Property description.
 	Schema      *Schema // Property schema.
 	Required    bool    // Whether the field is required or not.
+
+	X XProperty // Property extensions
 }
 
 // PatternProperty is a property pattern.

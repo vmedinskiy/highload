@@ -1,13 +1,8 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Convenient errors",
-    "description": "Example of using convenient errors special case",
-    "license": {
-      "name": "Apache 2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-    },
-    "version": "0.1.1"
+    "title": "Negative test: one operation has no default",
+    "version": "0.1.0"
   },
   "paths": {
     "/data": {
@@ -24,25 +19,12 @@
                 }
               }
             }
-          },
-          "default": {
-            "$ref": "#/components/responses/Error"
           }
         }
       },
       "post": {
         "description": "Creates data",
         "operationId": "dataCreate",
-        "requestBody": {
-          "description": "Data to create",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Data"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Data",
@@ -55,7 +37,14 @@
             }
           },
           "default": {
-            "$ref": "#/components/responses/Error"
+            "description": "General Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -91,18 +80,6 @@
           "code",
           "message"
         ]
-      }
-    },
-    "responses": {
-      "Error": {
-        "description": "General Error",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
       }
     }
   }
