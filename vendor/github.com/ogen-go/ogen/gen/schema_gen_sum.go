@@ -12,6 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/ogen-go/ogen/gen/ir"
+	"github.com/ogen-go/ogen/internal/location"
 	"github.com/ogen-go/ogen/internal/xmaps"
 	"github.com/ogen-go/ogen/internal/xslices"
 	"github.com/ogen-go/ogen/jsonschema"
@@ -92,22 +93,32 @@ func ensureNoInfiniteRecursion(parent *jsonschema.Schema) error {
 			}
 			if ref := s.Ref; !ref.IsZero() {
 				if _, ok := ctx[ref]; ok {
-					return errors.Errorf("reference %q [%d] leads to infinite recursion", ref, i)
+					err := errors.Errorf("reference %q [%d] leads to infinite recursion", ref, i)
+
+					pos, ok := s.Pointer.Position()
+					if !ok {
+						return err
+					}
+					return &location.Error{
+						File: s.File(),
+						Pos:  pos,
+						Err:  err,
+					}
 				}
 				ctx[ref] = struct{}{}
 			}
 			switch {
 			case len(s.OneOf) > 0:
 				if err := do(ctx, s.OneOf); err != nil {
-					return errors.Wrapf(err, "oneOf %q [%d]", s.Ref, i)
+					return err
 				}
 			case len(s.AllOf) > 0:
 				if err := do(ctx, s.AllOf); err != nil {
-					return errors.Wrapf(err, "allOf %q [%d]", s.Ref, i)
+					return err
 				}
 			case len(s.AnyOf) > 0:
 				if err := do(ctx, s.AnyOf); err != nil {
-					return errors.Wrapf(err, "anyOf %q [%d]", s.Ref, i)
+					return err
 				}
 			}
 			delete(ctx, s.Ref)
@@ -164,15 +175,19 @@ func schemaName(k jsonschema.Ref) (string, bool) {
 	return path.Base(after), true
 }
 
-func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema) (*ir.Type, error) {
+func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema, side bool) (*ir.Type, error) {
 	if err := ensureNoInfiniteRecursion(schema); err != nil {
 		return nil, err
 	}
 
+	var regSchema *jsonschema.Schema
+	if !side {
+		regSchema = schema
+	}
 	sum := g.regtype(name, &ir.Type{
 		Name:   name,
 		Kind:   ir.KindSum,
-		Schema: schema,
+		Schema: regSchema,
 	})
 	{
 		variants, err := g.collectSumVariants(name, schema.AnyOf)
@@ -222,15 +237,19 @@ func (g *schemaGen) anyOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 	return nil, &ErrNotImplemented{"complex anyOf"}
 }
 
-func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema) (*ir.Type, error) {
+func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema, side bool) (*ir.Type, error) {
 	if err := ensureNoInfiniteRecursion(schema); err != nil {
 		return nil, err
 	}
 
+	var regSchema *jsonschema.Schema
+	if !side {
+		regSchema = schema
+	}
 	sum := g.regtype(name, &ir.Type{
 		Name:   name,
 		Kind:   ir.KindSum,
-		Schema: schema,
+		Schema: regSchema,
 	})
 	{
 		variants, err := g.collectSumVariants(name, schema.OneOf)
@@ -256,7 +275,7 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 					vschema = schema.OneOf[i]
 				}
 
-				if vschema == v {
+				if vschema.Ref == v.Ref {
 					found = true
 					sum.SumSpec.Mapping = append(sum.SumSpec.Mapping, ir.SumSpecMap{
 						Key:  k,
@@ -267,6 +286,11 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 					xslices.Filter(&s.Fields, func(f *ir.Field) bool {
 						return f.Tag.JSON != propName
 					})
+
+					if s.AllowedProps == nil {
+						s.AllowedProps = map[string]struct{}{}
+					}
+					s.AllowedProps[propName] = struct{}{}
 				}
 			}
 			if !found {
@@ -321,8 +345,8 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 				})
 			}
 		}
-		slices.SortStableFunc(sum.SumSpec.Mapping, func(a, b ir.SumSpecMap) bool {
-			return a.Key < b.Key
+		slices.SortStableFunc(sum.SumSpec.Mapping, func(a, b ir.SumSpecMap) int {
+			return strings.Compare(a.Key, b.Key)
 		})
 		return sum, nil
 	}
@@ -409,8 +433,8 @@ func (g *schemaGen) oneOf(name string, schema *jsonschema.Schema) (*ir.Type, err
 			Unique: xmaps.SortedKeys(f),
 		})
 	}
-	slices.SortStableFunc(variants, func(a, b sumVariant) bool {
-		return a.Name < b.Name
+	slices.SortStableFunc(variants, func(a, b sumVariant) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 	for _, v := range variants {
 		for _, s := range sum.SumOf {
@@ -580,6 +604,19 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 		return s2, nil
 	}
 
+	if allOf := s1.AllOf; len(allOf) > 0 {
+		s1, err = mergeNSchemes(allOf)
+		if err != nil {
+			return nil, errors.Wrap(err, "merge subschemas")
+		}
+	}
+	if allOf := s2.AllOf; len(allOf) > 0 {
+		s2, err = mergeNSchemes(allOf)
+		if err != nil {
+			return nil, errors.Wrap(err, "merge subschemas")
+		}
+	}
+
 	containsValidators := func(s *jsonschema.Schema) bool {
 		if s.Type != "" || s.Format != "" || s.Nullable || len(s.Enum) > 0 || s.DefaultSet {
 			return true
@@ -587,7 +624,8 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 		if s.Item != nil ||
 			s.AdditionalProperties != nil ||
 			len(s.PatternProperties) > 0 ||
-			len(s.Properties) > 0 {
+			len(s.Properties) > 0 ||
+			len(s.Required) > 0 {
 			return true
 		}
 		if len(s.OneOf) > 0 || len(s.AnyOf) > 0 || len(s.AllOf) > 0 {
@@ -674,7 +712,7 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 		r.DefaultSet = true
 	case s1.DefaultSet && s2.DefaultSet:
 		if !reflect.DeepEqual(s1.Default, s2.Default) {
-			return nil, errors.Errorf("schemes have different defaults")
+			return nil, errors.New("schemes have different defaults")
 		}
 
 		r.Default = s1.Default
@@ -728,14 +766,31 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 
 	// Array validation
 	{
-		r.Item, err = mergeSchemes(s1.Item, s2.Item)
-		if err != nil {
-			return nil, errors.Wrap(err, "merge item schema")
-		}
+		switch {
+		case len(s1.Items) > 0 && len(s2.Items) > 0:
+			if len(s1.Items) != len(s2.Items) {
+				return nil, errors.Errorf("items length is different: %d and %d", len(s1.Items), len(s2.Items))
+			}
+			result := make([]*jsonschema.Schema, len(s1.Items))
+			for i, e1 := range s1.Items {
+				e2 := s2.Items[i]
+				result[i], err = mergeSchemes(e1, e2)
+				if err != nil {
+					return nil, errors.Wrapf(err, "merge items[%d]", i)
+				}
+			}
+		case len(s1.Items) == 0 && len(s2.Items) == 0:
+			r.Item, err = mergeSchemes(s1.Item, s2.Item)
+			if err != nil {
+				return nil, errors.Wrap(err, "merge item schema")
+			}
 
-		r.MinItems = someU64(s1.MinItems, s2.MinItems, selectMaxU64)
-		r.MaxItems = someU64(s1.MaxItems, s2.MaxItems, selectMinU64)
-		r.UniqueItems = s1.UniqueItems || s2.UniqueItems
+			r.MinItems = someU64(s1.MinItems, s2.MinItems, selectMaxU64)
+			r.MaxItems = someU64(s1.MaxItems, s2.MaxItems, selectMinU64)
+			r.UniqueItems = s1.UniqueItems || s2.UniqueItems
+		default:
+			return nil, errors.New("can't merge different types of items")
+		}
 	}
 
 	// Object validation
@@ -759,10 +814,32 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 
 		r.MinProperties = someU64(s1.MinProperties, s2.MinProperties, selectMaxU64)
 		r.MaxProperties = someU64(s1.MaxProperties, s2.MaxProperties, selectMinU64)
-		r.Properties, err = mergeProperties(s1.Properties, s2.Properties)
+		r.Properties, err = mergeProperties(s1, s2)
 		if err != nil {
 			return nil, errors.Wrap(err, "merge properties")
 		}
+	}
+
+	// oneOf, anyOf
+	mergeSum := func(name string, s1, s2 []*jsonschema.Schema) ([]*jsonschema.Schema, error) {
+		switch {
+		case len(s1) > 0 && len(s2) > 0:
+			return nil, &ErrNotImplemented{Name: fmt.Sprintf("allOf with %s", name)}
+		case len(s1) > 0:
+			return s1, nil
+		case len(s2) > 0:
+			return s2, nil
+		default:
+			return nil, nil
+		}
+	}
+	r.OneOf, err = mergeSum("oneOf", s1.OneOf, s2.OneOf)
+	if err != nil {
+		return nil, errors.Wrap(err, "merge oneOf")
+	}
+	r.AnyOf, err = mergeSum("anyOf", s1.AnyOf, s2.AnyOf)
+	if err != nil {
+		return nil, errors.Wrap(err, "merge anyOf")
 	}
 
 	return r, nil
@@ -770,12 +847,22 @@ func mergeSchemes(s1, s2 *jsonschema.Schema) (_ *jsonschema.Schema, err error) {
 
 // mergeProperties finds properties with identical names
 // and tries to merge them into one, avoiding duplicates.
-func mergeProperties(p1, p2 []jsonschema.Property) ([]jsonschema.Property, error) {
+func mergeProperties(s1, s2 *jsonschema.Schema) ([]jsonschema.Property, error) {
 	var (
+		p1 = s1.Properties
+		p2 = s2.Properties
+
 		propmap    = make(map[string]jsonschema.Property, len(p1)+len(p2))
 		order      = make(map[string]int, len(p1)+len(p2))
+		required   = make(map[string]struct{}, len(s1.Required)+len(s2.Required))
 		orderIndex = 0
 	)
+	for _, prop := range s1.Required {
+		required[prop] = struct{}{}
+	}
+	for _, prop := range s2.Required {
+		required[prop] = struct{}{}
+	}
 
 	// Fill the map with p1 props.
 	for _, p := range p1 {
@@ -809,6 +896,8 @@ func mergeProperties(p1, p2 []jsonschema.Property) ([]jsonschema.Property, error
 
 	result := make([]jsonschema.Property, len(propmap))
 	for name, p := range propmap {
+		_, require := required[p.Name]
+		p.Required = p.Required || require
 		result[order[name]] = p
 	}
 

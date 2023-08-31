@@ -1,6 +1,8 @@
 package jsonschema
 
 import (
+	"strings"
+
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
 	"golang.org/x/exp/slices"
@@ -101,9 +103,12 @@ func apply(s *RawSchema, d *jx.Decoder) error {
 		i := 0
 		return d.Arr(func(d *jx.Decoder) error {
 			if s.Items == nil {
-				s.Items = new(RawSchema)
+				s.Items = new(RawItems)
 			}
-			if err := apply(s.Items, d); err != nil {
+			if s.Items.Item == nil {
+				s.Items.Item = new(RawSchema)
+			}
+			if err := apply(s.Items.Item, d); err != nil {
 				return errors.Wrapf(err, "apply item %d", i)
 			}
 			i++
@@ -176,8 +181,8 @@ func apply(s *RawSchema, d *jx.Decoder) error {
 
 		// Sort fields to make output deterministic.
 		slices.Sort(s.Required)
-		slices.SortStableFunc(s.Properties, func(a, b RawProperty) bool {
-			return a.Name < b.Name
+		slices.SortStableFunc(s.Properties, func(a, b RawProperty) int {
+			return strings.Compare(a.Name, b.Name)
 		})
 
 		return nil

@@ -7,7 +7,8 @@ import (
 )
 
 func (s Users) Validate() error {
-	if s == nil {
+	alias := ([]User)(s)
+	if alias == nil {
 		return errors.New("nil is invalid value")
 	}
 	return nil

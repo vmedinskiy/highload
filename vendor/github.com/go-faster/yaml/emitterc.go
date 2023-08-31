@@ -25,6 +25,7 @@ package yaml
 import (
 	"bytes"
 	"fmt"
+	"unicode/utf8"
 )
 
 // Flush the buffer if needed.
@@ -420,7 +421,7 @@ func yaml_emitter_emit_document_start(emitter *yaml_emitter_t, event *yaml_event
 				if !yaml_emitter_write_tag_handle(emitter, tag_directive.handle) {
 					return false
 				}
-				if !yaml_emitter_write_tag_content(emitter, tag_directive.prefix, true) {
+				if !yaml_emitter_write_tag_content(emitter, tag_directive.prefix, true, true) {
 					return false
 				}
 				if !yaml_emitter_write_indent(emitter) {
@@ -676,7 +677,9 @@ func yaml_emitter_emit_flow_mapping_key(emitter *yaml_emitter_t, event *yaml_eve
 		}
 	}
 
-	if !emitter.canonical && yaml_emitter_check_simple_key(emitter) {
+	if !emitter.canonical &&
+		!yaml_emitter_check_empty_flow(emitter) &&
+		yaml_emitter_check_simple_key(emitter) {
 		emitter.states = append(emitter.states, yaml_EMIT_FLOW_MAPPING_SIMPLE_VALUE_STATE)
 		return yaml_emitter_emit_node(emitter, event, false, false, true, true)
 	}
@@ -727,11 +730,6 @@ func yaml_emitter_emit_flow_mapping_value(emitter *yaml_emitter_t, event *yaml_e
 
 // Expect a block item node.
 func yaml_emitter_emit_block_sequence_item(emitter *yaml_emitter_t, event *yaml_event_t, first bool) bool {
-	if first {
-		if !yaml_emitter_increase_indent(emitter, false, false) {
-			return false
-		}
-	}
 	if event.typ == yaml_SEQUENCE_END_EVENT {
 		emitter.indent = emitter.indents[len(emitter.indents)-1]
 		emitter.indents = emitter.indents[:len(emitter.indents)-1]
@@ -763,11 +761,6 @@ func yaml_emitter_emit_block_sequence_item(emitter *yaml_emitter_t, event *yaml_
 
 // Expect a block key node.
 func yaml_emitter_emit_block_mapping_key(emitter *yaml_emitter_t, event *yaml_event_t, first bool) bool {
-	if first {
-		if !yaml_emitter_increase_indent(emitter, false, false) {
-			return false
-		}
-	}
 	if !yaml_emitter_process_head_comment(emitter) {
 		return false
 	}
@@ -832,6 +825,7 @@ func yaml_emitter_emit_block_mapping_value(emitter *yaml_emitter_t, event *yaml_
 				return false
 			}
 			emitter.line_comment, emitter.key_line_comment = emitter.key_line_comment, emitter.line_comment
+			emitter.whitespace = false
 		}
 	}
 	emitter.states = append(emitter.states, yaml_EMIT_BLOCK_MAPPING_KEY_STATE)
@@ -911,16 +905,28 @@ func yaml_emitter_emit_scalar(emitter *yaml_emitter_t, event *yaml_event_t) bool
 
 // Expect SEQUENCE-START.
 func yaml_emitter_emit_sequence_start(emitter *yaml_emitter_t, event *yaml_event_t) bool {
-	if !yaml_emitter_process_anchor(emitter) {
-		return false
-	}
-	if !yaml_emitter_process_tag(emitter) {
-		return false
-	}
 	if emitter.flow_level > 0 || emitter.canonical || event.sequence_style() == yaml_FLOW_SEQUENCE_STYLE ||
 		yaml_emitter_check_empty_sequence(emitter) {
+		if !yaml_emitter_process_anchor(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_tag(emitter) {
+			return false
+		}
 		emitter.state = yaml_EMIT_FLOW_SEQUENCE_FIRST_ITEM_STATE
 	} else {
+		if !yaml_emitter_increase_indent(emitter, false, false) {
+			return false
+		}
+		if !yaml_emitter_write_indent(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_anchor(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_tag(emitter) {
+			return false
+		}
 		emitter.state = yaml_EMIT_BLOCK_SEQUENCE_FIRST_ITEM_STATE
 	}
 	return true
@@ -928,16 +934,38 @@ func yaml_emitter_emit_sequence_start(emitter *yaml_emitter_t, event *yaml_event
 
 // Expect MAPPING-START.
 func yaml_emitter_emit_mapping_start(emitter *yaml_emitter_t, event *yaml_event_t) bool {
-	if !yaml_emitter_process_anchor(emitter) {
-		return false
-	}
-	if !yaml_emitter_process_tag(emitter) {
-		return false
-	}
 	if emitter.flow_level > 0 || emitter.canonical || event.mapping_style() == yaml_FLOW_MAPPING_STYLE ||
 		yaml_emitter_check_empty_mapping(emitter) {
+		if !yaml_emitter_process_anchor(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_tag(emitter) {
+			return false
+		}
 		emitter.state = yaml_EMIT_FLOW_MAPPING_FIRST_KEY_STATE
 	} else {
+		// FIXME(tdakkota): should we do it for flow style?
+		//
+		// Write same indent as mapping have.
+		// In cases like this:
+		//
+		// 	a:
+		// 	 b: # comment
+		// 	  !tag
+		// 	  c:
+		//
+		if !yaml_emitter_increase_indent(emitter, false, false) {
+			return false
+		}
+		if !yaml_emitter_write_indent(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_anchor(emitter) {
+			return false
+		}
+		if !yaml_emitter_process_tag(emitter) {
+			return false
+		}
 		emitter.state = yaml_EMIT_BLOCK_MAPPING_FIRST_KEY_STATE
 	}
 	return true
@@ -966,12 +994,37 @@ func yaml_emitter_check_empty_mapping(emitter *yaml_emitter_t) bool {
 		emitter.events[emitter.events_head+1].typ == yaml_MAPPING_END_EVENT
 }
 
+// Check if the next events represent an empty flow sequence/mapping.
+func yaml_emitter_check_empty_flow(emitter *yaml_emitter_t) bool {
+	if len(emitter.events)-emitter.events_head < 2 {
+		return false
+	}
+
+	start := emitter.events[emitter.events_head]
+	switch start.typ {
+	case yaml_SEQUENCE_START_EVENT, yaml_MAPPING_START_EVENT:
+	default:
+		return false
+	}
+
+	end := emitter.events[emitter.events_head+1]
+	switch end.typ {
+	case yaml_SEQUENCE_END_EVENT, yaml_MAPPING_END_EVENT:
+	default:
+		return false
+	}
+
+	return start.style == yaml_style_t(yaml_FLOW_SEQUENCE_STYLE) ||
+		start.style == yaml_style_t(yaml_FLOW_MAPPING_STYLE)
+}
+
 // Check if the next node can be expressed as a simple key.
 func yaml_emitter_check_simple_key(emitter *yaml_emitter_t) bool {
 	length := 0
 	switch emitter.events[emitter.events_head].typ {
 	case yaml_ALIAS_EVENT:
 		length += len(emitter.anchor_data.anchor)
+		return false
 	case yaml_SCALAR_EVENT:
 		if emitter.scalar_data.multiline {
 			return false
@@ -1080,7 +1133,7 @@ func yaml_emitter_process_tag(emitter *yaml_emitter_t) bool {
 			return false
 		}
 		if len(emitter.tag_data.suffix) > 0 {
-			if !yaml_emitter_write_tag_content(emitter, emitter.tag_data.suffix, false) {
+			if !yaml_emitter_write_tag_content(emitter, emitter.tag_data.suffix, need_brackets, false) {
 				return false
 			}
 		}
@@ -1094,7 +1147,7 @@ func yaml_emitter_process_tag(emitter *yaml_emitter_t) bool {
 		if !yaml_emitter_write_indicator(emitter, []byte("!<"), true, false, false) {
 			return false
 		}
-		if !yaml_emitter_write_tag_content(emitter, emitter.tag_data.suffix, false) {
+		if !yaml_emitter_write_tag_content(emitter, emitter.tag_data.suffix, false, false) {
 			return false
 		}
 		if !yaml_emitter_write_indicator(emitter, []byte{'>'}, false, false, false) {
@@ -1562,7 +1615,7 @@ func yaml_emitter_write_tag_handle(emitter *yaml_emitter_t, value []byte) bool {
 	return true
 }
 
-func yaml_emitter_write_tag_content(emitter *yaml_emitter_t, value []byte, need_whitespace bool) bool {
+func yaml_emitter_write_tag_content(emitter *yaml_emitter_t, value []byte, allow_uri, need_whitespace bool) bool {
 	if need_whitespace && !emitter.whitespace {
 		if !put(emitter, ' ') {
 			return false
@@ -1571,8 +1624,10 @@ func yaml_emitter_write_tag_content(emitter *yaml_emitter_t, value []byte, need_
 	for i := 0; i < len(value); {
 		var must_write bool
 		switch value[i] {
-		case ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '_', '.', '~', '*', '\'', '(', ')', '[', ']':
+		case ';', '/', '?', ':', '@', '&', '=', '+', '$', '_', '.', '~', '*', '\'', '(', ')':
 			must_write = true
+		case '{', '}', '[', ']', ',':
+			must_write = allow_uri
 		default:
 			must_write = is_alpha(value, i)
 		}
@@ -1581,7 +1636,11 @@ func yaml_emitter_write_tag_content(emitter *yaml_emitter_t, value []byte, need_
 				return false
 			}
 		} else {
-			w := width(value[i])
+			r, w := utf8.DecodeRune(value[i:])
+			if r == utf8.RuneError {
+				yaml_emitter_set_emitter_error(emitter, fmt.Sprintf("invalid UTF-8 in tag %+q", value))
+				return false
+			}
 			for k := 0; k < w; k++ {
 				octet := value[i]
 				i++

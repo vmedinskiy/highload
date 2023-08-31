@@ -189,15 +189,10 @@ func templateFunctions() template.FuncMap {
 		},
 		"backquote": func(v any) string {
 			// Fast path for string.
-			s, ok := v.(string)
-			if !ok {
-				s = fmt.Sprintf("%v", v)
-			}
-			if strconv.CanBackquote(s) {
+			if s, ok := v.(string); ok && strconv.CanBackquote(s) {
 				return "`" + s + "`"
 			}
-			// Fallback to quote.
-			return strconv.Quote(s)
+			return fmt.Sprintf("%#q", v)
 		},
 		"times": func(n int) []struct{} {
 			return make([]struct{}, n)
@@ -219,12 +214,10 @@ func templateFunctions() template.FuncMap {
 //go:embed _template/*
 var templates embed.FS
 
-var (
-	_templates struct {
-		sync.Once
-		val *template.Template
-	}
-)
+var _templates struct {
+	sync.Once
+	val *template.Template
+}
 
 // vendoredTemplates parses and returns vendored code generation templates.
 func vendoredTemplates() *template.Template {

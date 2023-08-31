@@ -1,4 +1,9 @@
 linters-settings:
+  gosec:
+    config:
+      # Maximum allowed permissions mode file creation
+      # Default: "0600"
+      G306: "0644"
   gocyclo:
     min-complexity: 15
   maligned:
@@ -29,8 +34,6 @@ linters-settings:
 
 linters:
   enable:
-    - deadcode
-    - depguard
     - dogsled
     - errcheck
     - goconst
@@ -42,11 +45,9 @@ linters:
     - lll
     - misspell
     - nakedret
-    - structcheck
     - typecheck
     - unconvert
     - unparam
-    - varcheck
     - whitespace
     - unused
     # Do not enable:
@@ -111,6 +112,10 @@ issues:
     - linters: [revive, golint]
       text: "(unused-parameter|if-return)"
 
+    - linters: [gocritic]
+      text: ptrToRefParam
+      source: handleSchemaDepth
+
     # Intended in commands:
     # G307: Deferring unsafe method "Close" on type "*os.File"
     # G304: Potential file inclusion via variable
@@ -134,6 +139,6 @@ issues:
 
     # Not supposed to be constant.
     - linters: [goconst]
-      text: 'string `(string|number|u?int\d{0,2})`'
+      text: 'string `(string|number|u?int\d{0,2}|float\d{2})`'
     - linters: [goconst]
       text: "string `(Unix|unix|date|time|ipv6)"

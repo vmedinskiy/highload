@@ -730,6 +730,74 @@
           }
         }
       }
+    },
+    "/testUniqueItems": {
+      "get": {
+        "operationId": "testUniqueItems",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UniqueItemsTest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/testTuple": {
+      "get": {
+        "operationId": "testTuple",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TupleTest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/testTupleNamed": {
+      "get": {
+        "operationId": "testTupleNamed",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TupleNamedTest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/testInlineOneof": {
+      "get": {
+        "operationId": "testInlineOneof",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestInlineOneOf"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1001,6 +1069,29 @@
           }
         }
       },
+      "UniqueItemsTest": {
+        "type": "object",
+        "required": [
+          "required_unique"
+        ],
+        "properties": {
+          "required_unique": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "nullable_optional_unique": {
+            "type": "array",
+            "nullable": true,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "NullValue": {
         "type": "null"
       },
@@ -1204,6 +1295,9 @@
           },
           "oneOf-mapping-reference": {
             "$ref": "#/components/schemas/OneOfMappingReference"
+          },
+          "issue943": {
+            "$ref": "#/components/schemas/Issue943"
           }
         }
       },
@@ -1346,7 +1440,6 @@
         ]
       },
       "OneOfMappingReference": {
-        "type": "object",
         "oneOf": [
           {
             "$ref": "#/components/schemas/OneOfMappingReferenceA"
@@ -1440,6 +1533,76 @@
             "$ref": "#/components/schemas/OneOfNullables"
           }
         ]
+      },
+      "Issue943": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Issue943Variant1"
+          },
+          {
+            "$ref": "#/components/schemas/Issue943Variant2"
+          },
+          {
+            "$ref": "#/components/schemas/Issue943Map"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "selector",
+          "mapping": {
+            "variant1": "#/components/schemas/Issue943Variant1",
+            "variant2": "#/components/schemas/Issue943Variant2",
+            "variant3": "#/components/schemas/Issue943Map"
+          }
+        }
+      },
+      "Issue943Variant1": {
+        "type": "object",
+        "required": [
+          "selector",
+          "variant1_field"
+        ],
+        "properties": {
+          "selector": {
+            "type": "string"
+          },
+          "variant1_field": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Issue943Variant2": {
+        "type": "object",
+        "required": [
+          "selector",
+          "variant2_field"
+        ],
+        "properties": {
+          "selector": {
+            "type": "string"
+          },
+          "variant2_field": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Issue943Map": {
+        "type": "object",
+        "required": [
+          "selector"
+        ],
+        "properties": {
+          "selector": {
+            "type": "string"
+          }
+        },
+        "patternProperties": {
+          "^variant3_.*": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "TestFloatValidation": {
         "type": "object",
@@ -1593,6 +1756,223 @@
           }
         },
         "additionalProperties": false
+      },
+      "TupleTest": {
+        "type": "array",
+        "items": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "foo"
+            ],
+            "properties": {
+              "foo": {
+                "type": "string"
+              },
+              "bar": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "TupleNamedTest": {
+        "type": "array",
+        "items": [
+          {
+            "type": "integer",
+            "x-ogen-name": "Integer"
+          },
+          {
+            "type": "boolean",
+            "x-ogen-name": "Boolean"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "foo"
+            ],
+            "properties": {
+              "foo": {
+                "type": "string"
+              },
+              "bar": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "TestInlineOneOf": {
+        "type": "object",
+        "properties": {
+          "inline_discriminator": {
+            "$ref": "#/components/schemas/InlineDiscriminatorOneOf"
+          },
+          "merge_discriminator": {
+            "$ref": "#/components/schemas/MergeDiscriminatorOneOf"
+          },
+          "inline_unique_fields": {
+            "$ref": "#/components/schemas/InlineUniqueFieldsOneOf"
+          },
+          "merge_unique_fields": {
+            "$ref": "#/components/schemas/MergeUniqueFieldsOneOf"
+          }
+        }
+      },
+      "InlineDiscriminatorOneOf": {
+        "type": "object",
+        "required": [
+          "common"
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/InlineOneOfFoo"
+          },
+          {
+            "$ref": "#/components/schemas/InlineOneOfBar"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "foo": "#/components/schemas/InlineOneOfFoo",
+            "bar": "#/components/schemas/InlineOneOfBar"
+          }
+        }
+      },
+      "MergeDiscriminatorOneOf": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "common"
+            ],
+            "properties": {
+              "common": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InlineOneOfFoo"
+              },
+              {
+                "$ref": "#/components/schemas/InlineOneOfBar"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "foo": "#/components/schemas/InlineOneOfFoo",
+                "bar": "#/components/schemas/InlineOneOfBar"
+              }
+            }
+          }
+        ]
+      },
+      "InlineUniqueFieldsOneOf": {
+        "type": "object",
+        "required": [
+          "common"
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/InlineOneOfFoo"
+          },
+          {
+            "$ref": "#/components/schemas/InlineOneOfBar"
+          }
+        ]
+      },
+      "MergeUniqueFieldsOneOf": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "common"
+            ],
+            "properties": {
+              "common": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InlineOneOfFoo"
+              },
+              {
+                "$ref": "#/components/schemas/InlineOneOfBar"
+              }
+            ]
+          }
+        ]
+      },
+      "InlineOneOfFoo": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "foo": {
+            "type": "string"
+          }
+        }
+      },
+      "InlineOneOfBar": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "string"
+          }
+        }
       }
     },
     "parameters": {

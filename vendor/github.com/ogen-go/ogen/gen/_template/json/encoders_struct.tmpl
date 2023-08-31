@@ -3,7 +3,7 @@
 	{{- range $i, $f := $ }}
 		{
 		{{- $elem := field_elem $f }}
-		{{ template "json/enc" $elem }}
+		{{- template "json/enc" $elem }}
 		}
 	{{- end }}
 {{- end }}
@@ -13,14 +13,58 @@
 {{- $fields := $.JSON.Fields }}
 {{- $additional := $.JSON.AdditionalProps }}
 {{- $pattern := $.JSON.PatternProps }}
+{{- $sum := $.JSON.SumProps }}
 {{- $va := $.Validators }}
 // Encode implements json.Marshaler.
 func (s {{ $.ReadOnlyReceiver }}) Encode(e *jx.Encoder) {
+	{{- if $.Tuple }}
+	e.ArrStart()
+	s.encodeTuple(e)
+	e.ArrEnd()
+	{{- else }}
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
+	{{- end }}
 }
 
+{{- if $.Tuple }}
+// encodeTuple encodes fields.
+func (s {{ $.ReadOnlyReceiver }}) encodeTuple(e *jx.Encoder) {
+	{{- range $f := $.Fields }}
+	{
+		elem := s.{{ $f.Name }}
+		{{- template "json/enc" array_elem $f.Type }}
+	}
+	{{- end }}
+}
+
+// Decode decodes {{ $.Name }} from json.
+func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New({{ printf "invalid: unable to decode %s to nil" $.Name | quote }})
+	}
+	n := 0
+	if err := d.Arr(func(d *jx.Decoder) error {
+		switch n {
+		{{- range $i, $f := $.Fields }}
+		case {{ $i }}:
+			n++
+			{{- template "json/dec" elem $f.Type (printf "s.%s" $f.Name) }}
+			return nil
+		{{- end }}
+		default:
+			return errors.Errorf({{ printf "expected %d elements, got %%d" (len $.Fields) | quote }}, n)
+		}
+	}); err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.Errorf({{ printf "expected %d elements, got %%d" (len $.Fields) | quote }}, n)
+	}
+	return nil
+}
+{{- else }}
 // encodeFields encodes fields.
 func (s {{ $.ReadOnlyReceiver }}) encodeFields(e *jx.Encoder) {
 	{{- template "json/encode_struct_fields" $fields }}
@@ -36,6 +80,9 @@ func (s {{ $.ReadOnlyReceiver }}) encodeFields(e *jx.Encoder) {
     	{{ template "json/enc" map_elem $p.Type.Item }}
 	}
 	{{- end }}
+	{{- range $s := $sum }}
+	s.{{ $s.Name }}.encodeFields(e)
+	{{- end }}
 }
 
 var jsonFieldsNameOf{{ $.Name }} = [{{ len $fields }}]string{
@@ -49,6 +96,14 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New({{ printf "invalid: unable to decode %s to nil" $.Name | quote }})
 	}
+
+	{{- range $s := $sum }}
+	if err := d.Capture(func(d *jx.Decoder) error {
+		return s.{{ $s.Name }}.Decode(d)
+	}); err != nil {
+		return errors.Wrap(err, {{ printf "decode field %s" $s.Name | quote }})
+	}
+	{{- end }}
 
 	{{- $requiredMask := $fields.RequiredMask }}
 	{{- if $fields.HasRequired }}
@@ -77,17 +132,21 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 		{{- end }}
 		switch string(k) {
 	{{- range $i, $f := $fields }}
-	case {{ quote $f.Tag.JSON }}:
-		{{- if $f.Spec.Required }}
-		requiredBitSet[{{ div $i 8 }}] |= 1 << {{ mod $i 8 }}
-		{{ end -}}
+		case {{ quote $f.Tag.JSON }}:
+			{{- if $f.Spec.Required }}
+			requiredBitSet[{{ div $i 8 }}] |= 1 << {{ mod $i 8 }}
+			{{ end -}}
 
-		if err := func() error {
-			{{- template "json/dec" field_elem $f }}
-			return nil
-		}(); err != nil {
-			return errors.Wrap(err, {{ printf "decode field %q" $f.Tag.JSON | quote }})
-		}
+			if err := func() error {
+				{{- template "json/dec" field_elem $f }}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, {{ printf "decode field %q" $f.Tag.JSON | quote }})
+			}
+	{{- end }}
+	{{- range $k, $_ := $.AllowedProps }}
+		case {{ quote $k }}:
+			return d.Skip()
 	{{- end }}
 		default:
 			{{- if $pattern }}
@@ -130,7 +189,9 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 			return d.Skip()
 			{{- end }}
 		}
+		{{- if or (ne (len $fields) 0) $additional }}
 		return nil
+		{{- end }}
 	}); err != nil {
 		return errors.Wrap(err, {{ printf "decode %s" $.Name | quote }})
 	}
@@ -187,5 +248,6 @@ func (s *{{ $.Name }}) Decode(d *jx.Decoder) error {
 
 	return nil
 }
+{{- end }}
 
 {{ end }}

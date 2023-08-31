@@ -96,6 +96,16 @@ func (j JSON) PatternProps() (fields []*Field) {
 	return fields
 }
 
+// SumProps return field of Type that should be encoded as inlined sum.
+func (j JSON) SumProps() (fields []*Field) {
+	for _, f := range j.t.Fields {
+		if f.Inline == InlineSum {
+			fields = append(fields, f)
+		}
+	}
+	return fields
+}
+
 // Format returns format name for handling json encoding or decoding.
 //
 // Mostly used for encoding or decoding of string formats, like `json.EncodeUUID`,
@@ -132,15 +142,9 @@ func (j JSON) Format() string {
 		return "IPv6"
 	case "uri":
 		return "URI"
-	case "int8",
-		"int16",
-		"int32",
-		"int64",
-		"uint",
-		"uint8",
-		"uint16",
-		"uint32",
-		"uint64":
+	case "int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"float32", "float64":
 		if s.Type != jsonschema.String {
 			return ""
 		}

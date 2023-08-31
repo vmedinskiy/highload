@@ -28,6 +28,9 @@ const (
 	Null SchemaType = "null"
 )
 
+// String implements fmt.Stringer.
+func (t SchemaType) String() string { return string(t) }
+
 // Ref is a JSON Schema reference.
 type Ref = jsonpointer.RefKey
 
@@ -55,10 +58,12 @@ type Schema struct {
 	Deprecated  bool
 
 	Item                 *Schema           // Only for Array and Object with additional properties.
+	Items                []*Schema         // Only for Array
 	AdditionalProperties *bool             // Whether Object has additional properties.
 	PatternProperties    []PatternProperty // Only for Object.
 	Enum                 []any             // Only for Enum.
 	Properties           []Property        // Only for Object.
+	Required             []string
 
 	Nullable bool // Whether schema is nullable or not. Any types.
 

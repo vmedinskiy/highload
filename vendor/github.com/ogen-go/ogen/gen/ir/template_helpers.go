@@ -2,6 +2,7 @@ package ir
 
 import (
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slices"
 
@@ -112,6 +113,14 @@ func (t *Type) IsFloat() bool {
 	}
 }
 
+func (t *Type) IsStringifiedFloat() bool {
+	s := t.Schema
+	return t.IsFloat() &&
+		s != nil &&
+		s.Type == jsonschema.String &&
+		(s.Format == "float32" || s.Format == "float64")
+}
+
 func (t *Type) IsNull() bool {
 	return t.Primitive == Null
 }
@@ -216,8 +225,8 @@ func (t *Type) TypeDiscriminator() (r []TypeDiscriminatorCase) {
 		}
 		r = append(r, cse)
 	}
-	slices.SortStableFunc(r, func(a, b TypeDiscriminatorCase) bool {
-		return a.JXTypes < b.JXTypes
+	slices.SortStableFunc(r, func(a, b TypeDiscriminatorCase) int {
+		return strings.Compare(a.JXTypes, b.JXTypes)
 	})
 	return r
 }

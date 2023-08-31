@@ -3,6 +3,7 @@ package jsonschema
 
 import (
 	"encoding/json"
+	"fmt"
 	"go/token"
 	"math/big"
 	"strings"
@@ -91,16 +92,16 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 
 	if enum := schema.Enum; len(enum) > 0 {
 		loc := schema.Common.Locator.Field("enum")
-		for i := range enum {
-			for j := range enum {
+		for i, a := range enum {
+			for j, b := range enum {
 				if i == j {
 					continue
 				}
-				a, b := enum[i], enum[j]
 				if ok, _ := ogenjson.Equal(a, b); ok {
-					loc := loc.Index(i)
-					err := errors.Errorf("duplicate enum value: %q", a)
-					return nil, p.wrapLocation(p.file(ctx), loc, err)
+					me := new(location.MultiError)
+					me.Report(p.file(ctx), loc.Index(i), fmt.Sprintf("duplicate enum value: %q", a))
+					me.Report(p.file(ctx), loc.Index(j), "")
+					return nil, me
 				}
 			}
 		}
@@ -115,13 +116,9 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 	}
 	if d := schema.Default; len(d) > 0 {
 		if err := func() error {
-			v, err := parseJSONValue(s, json.RawMessage(d))
+			v, err := parseJSONValue(nil, json.RawMessage(d))
 			if err != nil {
 				return err
-			}
-
-			if v == nil && !s.Nullable {
-				return errors.New("unexpected default \"null\" value")
 			}
 
 			s.Default = v
@@ -152,7 +149,7 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 					return err
 				}
 
-				fieldNames := map[string]struct{}{}
+				fieldNames := map[string]location.Pointer{}
 				for propName, x := range props {
 					// FIXME(tdakkota): linear search
 					idx := slices.IndexFunc(s.Properties, func(p Property) bool { return p.Name == propName })
@@ -167,11 +164,14 @@ func (p *Parser) parse1(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hook fun
 							return p.wrapLocation(p.file(ctx), locator, err)
 						}
 
-						if _, ok := fieldNames[*n]; ok {
-							err := errors.Errorf("duplicate field name %q", *n)
-							return p.wrapLocation(p.file(ctx), locator, err)
+						ptr := locator.Pointer(p.file(ctx))
+						if existing, ok := fieldNames[*n]; ok {
+							me := new(location.MultiError)
+							me.ReportPtr(existing, fmt.Sprintf("duplicate field name %q", *n))
+							me.ReportPtr(ptr, "")
+							return me
 						}
-						fieldNames[*n] = struct{}{}
+						fieldNames[*n] = ptr
 					}
 
 					x.Pointer = locator.Field(propName).Pointer(p.file(ctx))
@@ -222,14 +222,14 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 		if min == nil || max == nil {
 			return nil
 		}
-		defer func() {
-			if rerr != nil {
-				rerr = wrapField("min"+prop, rerr)
-			}
-		}()
-
 		if *min > *max {
-			return errors.Errorf("min%s (%d) is greater than max%s (%d)", prop, *min, prop, *max)
+			msg := fmt.Sprintf("min%s (%d) is greater than max%s (%d)", prop, *min, prop, *max)
+			ptr := schema.Common.Locator.Pointer(p.file(ctx))
+
+			me := new(location.MultiError)
+			me.ReportPtr(ptr.Field("min"+prop), msg)
+			me.ReportPtr(ptr.Field("max"+prop), "")
+			return me
 		}
 		return nil
 	}
@@ -345,7 +345,7 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 				"type", "enum", "nullable", "format", "default",
 				"oneOf", "anyOf", "allOf", "discriminator",
 				"description", "example", "examples", "deprecated",
-				"additionalProperties",
+				"additionalProperties", "xml",
 			} {
 				fset[f] = struct{}{}
 			}
@@ -374,6 +374,7 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 		Type:     typ,
 		Format:   schema.Format,
 		Nullable: typ == Null,
+		Required: slices.Clone(schema.Required),
 		// Object validators
 		MaxProperties: schema.MaxProperties,
 		MinProperties: schema.MinProperties,
@@ -428,8 +429,11 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 			} else {
 				additional = true
 				if schema.Items != nil {
-					err := errors.New("both additionalProperties and items fields are set")
-					return nil, wrapField("additionalProperties", err)
+					ptr := schema.Common.Locator.Pointer(p.file(ctx))
+					me := new(location.MultiError)
+					me.ReportPtr(ptr.Field("additionalProperties"), "both additionalProperties and items fields are set")
+					me.ReportPtr(ptr.Field("items"), "")
+					return nil, me
 				}
 
 				s.Item, err = p.parse(&ap.Schema, ctx)
@@ -498,10 +502,22 @@ func (p *Parser) parseSchema(schema *RawSchema, ctx *jsonpointer.ResolveCtx, hoo
 			return nil, err
 		}
 
-		if schema.Items != nil {
-			s.Item, err = p.parse(schema.Items, ctx)
-			if err != nil {
-				return nil, wrapField("items", err)
+		if items := schema.Items; items != nil {
+			if item := items.Item; item != nil {
+				s.Item, err = p.parse(items.Item, ctx)
+				if err != nil {
+					return nil, wrapField("items", err)
+				}
+			} else {
+				itemsLoc := s.Locator.Field("items")
+				if len(items.Items) == 0 {
+					err := errors.New("array is empty")
+					return nil, wrapField("items", err)
+				}
+				s.Items, err = p.parseMany(items.Items, itemsLoc, ctx)
+				if err != nil {
+					return nil, wrapField("items", err)
+				}
 			}
 		}
 	}

@@ -13,6 +13,8 @@ import (
 	"github.com/ogen-go/ogen/jsonschema"
 )
 
+type refNamer func(ref jsonschema.Ref) (string, error)
+
 const defaultSchemaDepthLimit = 1000
 
 type schemaGen struct {
@@ -20,6 +22,7 @@ type schemaGen struct {
 	localRefs map[jsonschema.Ref]*ir.Type
 	lookupRef func(ref jsonschema.Ref) (*ir.Type, bool)
 	nameRef   func(ref jsonschema.Ref) (string, error)
+	fieldMut  func(*ir.Field) error
 	fail      func(err error) error
 
 	customFormats map[jsonschema.SchemaType]map[string]ir.CustomFormat
@@ -53,10 +56,49 @@ func variantFieldName(t *ir.Type) string {
 	return naming.Capitalize(t.NamePostfix())
 }
 
+type schemaDepthError struct {
+	limit int
+}
+
+func (e *schemaDepthError) Error() string {
+	return fmt.Sprintf("schema depth limit (%d) exceeded", e.limit)
+}
+
+func handleSchemaDepth(s *jsonschema.Schema, rerr *error) {
+	r := recover()
+	if r == nil {
+		return
+	}
+
+	e, ok := r.(*schemaDepthError)
+	if !ok {
+		panic(r)
+	}
+	*rerr = e
+
+	// Ensure that schema is not nil.
+	if s == nil {
+		return
+	}
+	ptr := s.Pointer
+
+	// Try to use location.Error.
+	pos, ok := ptr.Position()
+	if !ok {
+		return
+	}
+	*rerr = &location.Error{
+		File: ptr.File(),
+		Pos:  pos,
+		Err:  e,
+	}
+}
+
 func (g *schemaGen) generate(name string, schema *jsonschema.Schema, optional bool) (*ir.Type, error) {
 	g.depthCount++
 	if g.depthCount > g.depthLimit {
-		return nil, errors.Errorf("schema depth limit (%d) exceeded", g.depthLimit)
+		// Panicing is not cool, but is better rather than wrap the error N = depthLimit times.
+		panic(&schemaDepthError{limit: g.depthLimit})
 	}
 	defer func() {
 		g.depthCount--
@@ -105,17 +147,36 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 
 	if schema.DefaultSet {
 		var implErr error
-		switch schema.Type {
-		case jsonschema.Object:
+		switch {
+		case schema.Type == jsonschema.Object:
 			implErr = &ErrNotImplemented{Name: "object defaults"}
-		case jsonschema.Array:
+		case schema.Type == jsonschema.Array:
 			implErr = &ErrNotImplemented{Name: "array defaults"}
+		case schema.Type == jsonschema.Empty ||
+			len(schema.AnyOf)+len(schema.OneOf) > 0:
+			implErr = &ErrNotImplemented{Name: "complex defaults"}
 		}
 		// Do not fail schema generation if we cannot handle defaults.
 		if err := g.fail(implErr); err != nil {
 			return nil, err
 		}
+
+		if implErr == nil {
+			if err := g.checkDefaultType(schema, schema.Default); err != nil {
+				return nil, errors.Wrap(err, "check default type")
+			}
+		}
 		schema.DefaultSet = implErr == nil
+	}
+
+	if schema.UniqueItems {
+		item := schema.Item
+		if item == nil ||
+			item.Type == "" ||
+			item.Type == jsonschema.Array ||
+			item.Type == jsonschema.Object {
+			return nil, &ErrNotImplemented{Name: "complex uniqueItems"}
+		}
 	}
 
 	if n := schema.XOgenName; n != "" {
@@ -124,13 +185,51 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		name = "R" + name
 	}
 
+	var (
+		oneOf                   *ir.Type
+		anyOf                   *ir.Type
+		checkOnlyObjectVariants = func(sum []*jsonschema.Schema) error {
+			for _, s := range sum {
+				if s.Type == jsonschema.Object {
+					continue
+				}
+
+				ptr := s.Pointer
+				err := errors.Errorf("can't merge object with %s", s.Type)
+
+				pos, ok := ptr.Position()
+				if !ok {
+					return err
+				}
+
+				return &location.Error{
+					File: ptr.File(),
+					Pos:  pos,
+					Err:  err,
+				}
+			}
+			return nil
+		}
+	)
 	switch {
 	case len(schema.AnyOf) > 0:
-		t, err := g.anyOf(name, schema)
+		side := schema.Type == jsonschema.Object
+		sumName := name
+		if side {
+			sumName += "Sum"
+		}
+		t, err := g.anyOf(sumName, schema, side)
 		if err != nil {
 			return nil, errors.Wrap(err, "anyOf")
 		}
-		return t, nil
+
+		if !side {
+			return t, nil
+		}
+		if err := checkOnlyObjectVariants(schema.AnyOf); err != nil {
+			return nil, err
+		}
+		anyOf = t
 	case len(schema.AllOf) > 0:
 		t, err := g.allOf(name, schema)
 		if err != nil {
@@ -138,11 +237,23 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		}
 		return t, nil
 	case len(schema.OneOf) > 0:
-		t, err := g.oneOf(name, schema)
+		side := schema.Type == jsonschema.Object
+		sumName := name
+		if side {
+			sumName += "Sum"
+		}
+		t, err := g.oneOf(sumName, schema, side)
 		if err != nil {
 			return nil, errors.Wrap(err, "oneOf")
 		}
-		return t, nil
+
+		if !side {
+			return t, nil
+		}
+		if err := checkOnlyObjectVariants(schema.OneOf); err != nil {
+			return nil, err
+		}
+		oneOf = t
 	}
 
 	switch schema.Type {
@@ -181,6 +292,11 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 		fieldNames := map[string]fieldSlot{}
 
 		addField := func(f *ir.Field, adding fieldSlot) error {
+			if m := g.fieldMut; m != nil {
+				if err := m(f); err != nil {
+					return err
+				}
+			}
 			existing, ok := fieldNames[f.Name]
 			if !ok {
 				s.Fields = append(s.Fields, f)
@@ -333,25 +449,77 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 				}
 			}
 		}
+		if anyOf != nil {
+			slot := fieldSlot{
+				original:      "anyOf",
+				nameDefinedAt: schema.Pointer.Key("anyOf"),
+			}
+			if err := addField(&ir.Field{
+				Name:   "AnyOf",
+				Type:   anyOf,
+				Inline: ir.InlineSum,
+			}, slot); err != nil {
+				return nil, err
+			}
+		}
+		if oneOf != nil {
+			slot := fieldSlot{
+				original:      "oneOf",
+				nameDefinedAt: schema.Pointer.Key("oneOf"),
+			}
+			if err := addField(&ir.Field{
+				Name:   "OneOf",
+				Type:   oneOf,
+				Inline: ir.InlineSum,
+			}, slot); err != nil {
+				return nil, err
+			}
+		}
 
 		return s, nil
 	case jsonschema.Array:
+		if tuple := schema.Items; len(tuple) > 0 {
+			ret := g.regtype(name, &ir.Type{
+				Kind:   ir.KindStruct,
+				Name:   name,
+				Schema: schema,
+				Tuple:  true,
+			})
+
+			for i, item := range tuple {
+				fieldName := fmt.Sprintf("V%d", i)
+				if item.XOgenName != "" {
+					// Using the name from the ogen schema extension.
+					// Avoiding name conflicts is up to user.
+					fieldName = item.XOgenName
+				}
+				f, err := g.generate(name+fieldName, item, false)
+				if err != nil {
+					return nil, errors.Wrapf(err, "tuple element %d", i)
+				}
+				ret.Fields = append(ret.Fields, &ir.Field{
+					Name: fieldName,
+					Type: f,
+				})
+			}
+
+			return ret, nil
+		}
 		array := &ir.Type{
 			Kind:        ir.KindArray,
 			Schema:      schema,
 			NilSemantic: ir.NilInvalid,
 		}
-
 		array.Validators.SetArray(schema)
 
 		ret := g.regtype(name, array)
-		if schema.Item != nil {
-			array.Item, err = g.generate(name+"Item", schema.Item, false)
+		if item := schema.Item; item != nil {
+			array.Item, err = g.generate(name+"Item", item, false)
 			if err != nil {
 				return nil, errors.Wrap(err, "item")
 			}
 		} else {
-			array.Item = ir.Any(schema.Item)
+			array.Item = ir.Any(item)
 		}
 
 		return ret, nil
@@ -364,7 +532,7 @@ func (g *schemaGen) generate2(name string, schema *jsonschema.Schema) (ret *ir.T
 
 		fields := []zap.Field{
 			zapPosition(schema),
-			zap.String("type", string(schema.Type)),
+			zap.String("type", schema.Type.String()),
 			zap.String("format", schema.Format),
 			zap.String("go_type", t.Go()),
 		}
@@ -446,4 +614,53 @@ func (g *schemaGen) regtype(name string, t *ir.Type) *ir.Type {
 	}
 
 	return t
+}
+
+func (g *schemaGen) checkDefaultType(s *jsonschema.Schema, val any) error {
+	if s == nil {
+		// Schema has no validators.
+		return nil
+	}
+	if val == nil && s.Nullable {
+		return nil
+	}
+
+	var ok bool
+	switch s.Type {
+	case jsonschema.Object:
+		_, ok = val.(map[string]any)
+	case jsonschema.Array:
+		_, ok = val.([]any)
+	case jsonschema.Integer:
+		_, ok = val.(int64)
+	case jsonschema.Number:
+		_, ok = val.(int64)
+		if !ok {
+			_, ok = val.(float64)
+		}
+	case jsonschema.String:
+		_, ok = val.(string)
+	case jsonschema.Boolean:
+		_, ok = val.(bool)
+	case jsonschema.Null:
+		ok = val == nil
+	}
+
+	if !ok {
+		err := errors.Errorf("expected schema type is %q, default value is %T", s.Type, val)
+		p := s.Pointer.Field("default")
+
+		pos, ok := p.Position()
+		if !ok {
+			return err
+		}
+
+		return &location.Error{
+			File: p.File(),
+			Pos:  pos,
+			Err:  err,
+		}
+	}
+
+	return nil
 }

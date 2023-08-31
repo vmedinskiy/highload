@@ -11,7 +11,7 @@ import (
 	"github.com/ogen-go/ogen/jsonschema"
 )
 
-func saveSchemaTypes(ctx *genctx, gen *schemaGen) error {
+func saveSchemaTypes(ctx *genctx, gen *schemaGen, refEncoding map[jsonschema.Ref]ir.Encoding) error {
 	for _, t := range gen.side {
 		if t.IsStruct() {
 			if err := checkStructRecursions(ctx, t); err != nil {
@@ -30,15 +30,54 @@ func saveSchemaTypes(ctx *genctx, gen *schemaGen) error {
 				return errors.Wrap(err, ref.String())
 			}
 		}
-		if err := ctx.saveRef(ref, t); err != nil {
+		encoding := ir.EncodingJSON
+		if e, ok := refEncoding[ref]; ok {
+			encoding = e
+		}
+		if err := ctx.saveRef(ref, encoding, t); err != nil {
 			return errors.Wrap(err, "save referenced type")
 		}
 	}
 	return nil
 }
 
-func (g *Generator) generateSchema(ctx *genctx, name string, schema *jsonschema.Schema, optional bool) (*ir.Type, error) {
-	gen := newSchemaGen(ctx.lookupRef)
+type generateSchemaOverride struct {
+	refEncoding map[jsonschema.Ref]ir.Encoding
+	nameRef     func(ref jsonschema.Ref, def refNamer) (string, error)
+	fieldMut    func(*ir.Field) error
+}
+
+func (g *Generator) generateSchema(
+	ctx *genctx,
+	name string,
+	schema *jsonschema.Schema,
+	optional bool,
+	override *generateSchemaOverride,
+) (_ *ir.Type, rerr error) {
+	defer handleSchemaDepth(schema, &rerr)
+
+	lookup := func(ref jsonschema.Ref) (*ir.Type, bool) {
+		encoding := ir.EncodingJSON
+		if o := override; o != nil {
+			if e, ok := o.refEncoding[ref]; ok {
+				encoding = e
+			}
+		}
+		return ctx.lookupRef(ref, encoding)
+	}
+
+	gen := newSchemaGen(lookup)
+	if o := override; o != nil {
+		if n := o.nameRef; n != nil {
+			prev := gen.nameRef
+			gen.nameRef = func(ref jsonschema.Ref) (string, error) {
+				return n(ref, prev)
+			}
+		}
+		if m := o.fieldMut; m != nil {
+			gen.fieldMut = m
+		}
+	}
 	gen.log = g.log.Named("schemagen")
 	gen.fail = g.fail
 	gen.customFormats = g.customFormats
@@ -49,7 +88,11 @@ func (g *Generator) generateSchema(ctx *genctx, name string, schema *jsonschema.
 		return nil, err
 	}
 
-	if err := saveSchemaTypes(ctx, gen); err != nil {
+	var refEncoding map[jsonschema.Ref]ir.Encoding
+	if o := override; o != nil {
+		refEncoding = o.refEncoding
+	}
+	if err := saveSchemaTypes(ctx, gen, refEncoding); err != nil {
 		return nil, errors.Wrap(err, "save schema types")
 	}
 
@@ -92,7 +135,9 @@ func (o *GenerateSchemaOptions) setDefaults() {
 }
 
 // GenerateSchema generates type, validation and JSON encoding for given schema.
-func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchemaOptions) error {
+func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchemaOptions) (rerr error) {
+	defer handleSchemaDepth(schema, &rerr)
+
 	opts.setDefaults()
 
 	ctx := &genctx{
@@ -131,7 +176,7 @@ func GenerateSchema(schema *jsonschema.Schema, fs FileSystem, opts GenerateSchem
 	}
 	t.AddFeature("json")
 
-	if err := saveSchemaTypes(ctx, gen); err != nil {
+	if err := saveSchemaTypes(ctx, gen, nil); err != nil {
 		return errors.Wrap(err, "save schema types")
 	}
 

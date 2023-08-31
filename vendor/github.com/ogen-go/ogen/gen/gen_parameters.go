@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ogen-go/ogen/gen/ir"
+	"github.com/ogen-go/ogen/internal/naming"
 	"github.com/ogen-go/ogen/jsonschema"
 	"github.com/ogen-go/ogen/openapi"
 )
@@ -38,8 +39,8 @@ func vetHeaderParameterName(log *zap.Logger, name string, loc position, ignore .
 func (g *Generator) generateParameters(ctx *genctx, opName string, params []*openapi.Parameter) (_ []*ir.Parameter, err error) {
 	result := make([]*ir.Parameter, 0, len(params))
 	for _, p := range params {
-		if p.In == openapi.LocationHeader {
-			if vetHeaderParameterName(g.log, p.Name, p, "Content-Type", "Accept", "Authorization") {
+		if p.In.Header() {
+			if vetHeaderParameterName(g.log, p.Name, p, "Content-Type", "Authorization") {
 				continue
 			}
 		}
@@ -50,7 +51,7 @@ func (g *Generator) generateParameters(ctx *genctx, opName string, params []*ope
 				return nil, err
 			}
 			// Path parameters are required.
-			if p.In == openapi.LocationPath {
+			if p.In.Path() {
 				return nil, err
 			}
 			continue
@@ -83,9 +84,13 @@ func (g *Generator) generateParameters(ctx *genctx, opName string, params []*ope
 					if err != nil {
 						return nil, errors.Wrap(err, "parameter name")
 					}
-				case specNameEqual:
-					p.Name = string(p.Spec.In) + p.Name
-					pp.Name = string(pp.Spec.In) + pp.Name
+
+					if p.Name == pp.Name {
+						return nil, &ErrNotImplemented{"too similar parameter name"}
+					}
+				default:
+					p.Name = naming.Capitalize(p.Spec.In.String()) + p.Name
+					pp.Name = naming.Capitalize(pp.Spec.In.String()) + pp.Name
 				}
 			}
 		}
@@ -105,7 +110,7 @@ func (g *Generator) generateParameter(ctx *genctx, opName string, p *openapi.Par
 	}
 
 	generate := func(ctx *genctx, sch *jsonschema.Schema) (*ir.Type, error) {
-		return g.generateSchema(ctx, paramTypeName, sch, !p.Required)
+		return g.generateSchema(ctx, paramTypeName, sch, !p.Required, nil)
 	}
 	t, err := func() (*ir.Type, error) {
 		if content := p.Content; content != nil {

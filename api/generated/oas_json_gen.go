@@ -22,12 +22,10 @@ func (s *Error5xx) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *Error5xx) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("code")
 		e.Int(s.Code)
 	}
 	{
-
 		e.FieldStart("message")
 		e.Str(s.Message)
 	}
@@ -237,7 +235,6 @@ func (s *Error5xxAdditionalItem) Decode(d *jx.Decoder) error {
 		default:
 			return d.Skip()
 		}
-		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode Error5xxAdditionalItem")
 	}
@@ -268,12 +265,10 @@ func (s *ErrorGeneric) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ErrorGeneric) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("code")
 		e.Int(s.Code)
 	}
 	{
-
 		e.FieldStart("message")
 		e.Str(s.Message)
 	}
@@ -483,7 +478,6 @@ func (s *ErrorGenericAdditionalItem) Decode(d *jx.Decoder) error {
 		default:
 			return d.Skip()
 		}
-		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ErrorGenericAdditionalItem")
 	}
@@ -628,12 +622,10 @@ func (s *LoginInput) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *LoginInput) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("id")
 		e.Int64(s.ID)
 	}
 	{
-
 		e.FieldStart("password")
 		e.Str(s.Password)
 	}
@@ -743,7 +735,6 @@ func (s *LoginResponse) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *LoginResponse) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("token")
 		e.Str(s.Token)
 	}
@@ -986,32 +977,26 @@ func (s *User) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *User) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("id")
 		e.Int64(s.ID)
 	}
 	{
-
 		e.FieldStart("first_name")
 		e.Str(s.FirstName)
 	}
 	{
-
 		e.FieldStart("second_name")
 		e.Str(s.SecondName)
 	}
 	{
-
 		e.FieldStart("age")
 		e.Int32(s.Age)
 	}
 	{
-
 		e.FieldStart("biography")
 		e.Str(s.Biography)
 	}
 	{
-
 		e.FieldStart("city")
 		e.Str(s.City)
 	}
@@ -1173,12 +1158,10 @@ func (s *UserRegister) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *UserRegister) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("first_name")
 		e.Str(s.FirstName)
 	}
 	{
-
 		e.FieldStart("second_name")
 		e.Str(s.SecondName)
 	}
@@ -1201,7 +1184,6 @@ func (s *UserRegister) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-
 		e.FieldStart("password")
 		e.Str(s.Password)
 	}
@@ -1357,7 +1339,6 @@ func (s *UserRegisterResponse) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *UserRegisterResponse) encodeFields(e *jx.Encoder) {
 	{
-
 		e.FieldStart("user_id")
 		e.Int64(s.UserID)
 	}

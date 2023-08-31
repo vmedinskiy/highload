@@ -14,18 +14,14 @@
 
 {{- if and ($t.IsGeneric) ($t.GenericOf.NeedValidation) }}
 	{{- $validated = true }}
-	{{- if $t.GenericVariant.Optional }}
-		if {{ $.Var }}.Set {
-			if err := func() error {
-				{{- template "validate" elem $t.GenericOf (printf "%s.Value" $.Var) }}
-			}(); err != nil {
-				return err
-			}
+	if value, ok := {{ $.Var }}.Get(); ok {
+		if err := func() error {
+			{{- template "validate" elem $t.GenericOf "value" }}
+		}(); err != nil {
+			return err
 		}
-		return nil
-	{{- else }}
-		{{- template "validate" elem $t.GenericOf (printf "%s.Value" $.Var) }}
-	{{- end }}
+	}
+	return nil
 {{- end }}
 
 {{- if and ($t.IsPointer) ($t.PointerTo.NeedValidation) -}}
@@ -57,6 +53,11 @@
 		}).ValidateLength(len({{ $.Var }})); err != nil {
 			return errors.Wrap(err, "array")
 		}
+		{{- if $v.UniqueItems }}
+		if err := validate.UniqueItems({{ $.Var }}); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		{{- end }}
 	{{- end }}
 
 	{{- if $t.Item.NeedValidation }}
@@ -130,7 +131,7 @@
             {{- else }}
 			MultipleOf: nil,
 			{{- end }}
-		{{ end }} }).Validate(float64({{ $.Var }})); err != nil {
+		{{ end }} }).Validate{{- if $t.IsStringifiedFloat -}}Stringified{{- end }}(float64({{ $.Var }})); err != nil {
 			return errors.Wrap(err, "float")
 		}
     {{- end }}
@@ -150,7 +151,7 @@
 
 {{- range $t := $.Types }}{{/*Range schemas*/}}
 {{- if $t.NeedValidation }}{{/*Need validation*/}}
-{{- if $t.IsStruct }}{{/*If struct*/}}
+{{ if $t.IsStruct }}{{/*If struct*/}}
 func (s {{ $t.ReadOnlyReceiver }}) Validate() error {
 	var failures []validate.FieldError
 	{{- range $f := $t.Fields }}{{/*Range fields*/}}
@@ -194,7 +195,12 @@ func (s {{ $t.ReadOnlyReceiver }}) Validate() error {
 }
 {{- else if $t.IsAlias }}
 func (s {{ $t.ReadOnlyReceiver }}) Validate() error {
-	{{- template "validate" elem $t.AliasTo "s" }}
+	{{- if $t.DoPassByPointer }}
+	alias := ({{ $t.AliasTo.ReadOnlyReceiver }})(s)
+	{{- else }}
+	alias := ({{ $t.AliasTo.Go }})(s)
+	{{- end }}
+	{{- template "validate" elem $t.AliasTo "alias" }}
 }
 {{- else if $t.IsSum }}
 func (s {{ $t.ReadOnlyReceiver }}) Validate() error {
@@ -234,7 +240,6 @@ switch s {
 {{ define "validators" }}
 {{- /*gotype: github.com/ogen-go/ogen/gen.TemplateConfig*/ -}}
 
-{{ $pkg := $.Package }}
 {{ template "header" $ }}
 
 {{ template "validators/body" $ }}

@@ -9,7 +9,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ogen-go/ogen/middleware"
@@ -40,17 +41,18 @@ func (s *Server) handleGetUserRequest(args [1]string, argsEscaped bool, w http.R
 	startTime := time.Now()
 	defer func() {
 		elapsedDuration := time.Since(startTime)
-		s.duration.Record(ctx, elapsedDuration.Microseconds(), otelAttrs...)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
-	s.requests.Add(ctx, 1, otelAttrs...)
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	var (
 		recordError = func(stage string, err error) {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, stage)
-			s.errors.Add(ctx, 1, otelAttrs...)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
@@ -186,17 +188,18 @@ func (s *Server) handleLoginUserRequest(args [0]string, argsEscaped bool, w http
 	startTime := time.Now()
 	defer func() {
 		elapsedDuration := time.Since(startTime)
-		s.duration.Record(ctx, elapsedDuration.Microseconds(), otelAttrs...)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
-	s.requests.Add(ctx, 1, otelAttrs...)
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	var (
 		recordError = func(stage string, err error) {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, stage)
-			s.errors.Add(ctx, 1, otelAttrs...)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
@@ -288,17 +291,18 @@ func (s *Server) handleRegisterUserRequest(args [0]string, argsEscaped bool, w h
 	startTime := time.Now()
 	defer func() {
 		elapsedDuration := time.Since(startTime)
-		s.duration.Record(ctx, elapsedDuration.Microseconds(), otelAttrs...)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
-	s.requests.Add(ctx, 1, otelAttrs...)
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	var (
 		recordError = func(stage string, err error) {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, stage)
-			s.errors.Add(ctx, 1, otelAttrs...)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
@@ -385,17 +389,18 @@ func (s *Server) handleUserSearchGetRequest(args [0]string, argsEscaped bool, w 
 	startTime := time.Now()
 	defer func() {
 		elapsedDuration := time.Since(startTime)
-		s.duration.Record(ctx, elapsedDuration.Microseconds(), otelAttrs...)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
-	s.requests.Add(ctx, 1, otelAttrs...)
+	s.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	var (
 		recordError = func(stage string, err error) {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, stage)
-			s.errors.Add(ctx, 1, otelAttrs...)
+			s.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{

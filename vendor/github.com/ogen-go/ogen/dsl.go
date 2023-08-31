@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-faster/jx"
+	"golang.org/x/exp/slices"
 
 	"github.com/ogen-go/ogen/jsonschema"
 	"github.com/ogen-go/ogen/openapi"
@@ -31,7 +32,7 @@ func (s *Spec) SetInfo(i *Info) *Spec {
 
 // SetServers sets the Servers of the Spec.
 func (s *Spec) SetServers(srvs []Server) *Spec {
-	s.Servers = srvs
+	s.Servers = slices.Clone(srvs)
 	return s
 }
 
@@ -444,7 +445,7 @@ func (p *PathItem) SetTrace(o *Operation) *PathItem {
 
 // SetServers sets the Servers of the PathItem.
 func (p *PathItem) SetServers(srvs []Server) *PathItem {
-	p.Servers = srvs
+	p.Servers = slices.Clone(srvs)
 	return p
 }
 
@@ -460,7 +461,7 @@ func (p *PathItem) AddServers(srvs ...*Server) *PathItem {
 
 // SetParameters sets the Parameters of the PathItem.
 func (p *PathItem) SetParameters(ps []*Parameter) *PathItem {
-	p.Parameters = ps
+	p.Parameters = slices.Clone(ps)
 	return p
 }
 
@@ -498,7 +499,7 @@ func NewOperation() *Operation {
 
 // SetTags sets the Tags of the Operation.
 func (o *Operation) SetTags(ts []string) *Operation {
-	o.Tags = ts
+	o.Tags = slices.Clone(ts)
 	return o
 }
 
@@ -528,7 +529,7 @@ func (o *Operation) SetOperationID(id string) *Operation {
 
 // SetParameters sets the Parameters of the Operation.
 func (o *Operation) SetParameters(ps []*Parameter) *Operation {
-	o.Parameters = ps
+	o.Parameters = slices.Clone(ps)
 	return o
 }
 
@@ -597,22 +598,22 @@ func (p *Parameter) SetIn(i string) *Parameter {
 
 // InPath sets the In of the Parameter to "path".
 func (p *Parameter) InPath() *Parameter {
-	return p.SetIn(string(openapi.LocationPath))
+	return p.SetIn(openapi.LocationPath.String())
 }
 
 // InQuery sets the In of the Parameter to "query".
 func (p *Parameter) InQuery() *Parameter {
-	return p.SetIn(string(openapi.LocationQuery))
+	return p.SetIn(openapi.LocationQuery.String())
 }
 
 // InHeader sets the In of the Parameter to "header".
 func (p *Parameter) InHeader() *Parameter {
-	return p.SetIn(string(openapi.LocationHeader))
+	return p.SetIn(openapi.LocationHeader.String())
 }
 
 // InCookie sets the In of the Parameter to "cookie".
 func (p *Parameter) InCookie() *Parameter {
-	return p.SetIn(string(openapi.LocationCookie))
+	return p.SetIn(openapi.LocationCookie.String())
 }
 
 // SetDescription sets the Description of the Parameter.
@@ -772,6 +773,12 @@ func (s *Schema) SetRef(r string) *Schema {
 	return s
 }
 
+// SetSummary sets the Summary of the Schema.
+func (s *Schema) SetSummary(smry string) *Schema {
+	s.Summary = smry
+	return s
+}
+
 // SetDescription sets the Description of the Schema.
 func (s *Schema) SetDescription(d string) *Schema {
 	s.Description = d
@@ -823,13 +830,15 @@ func (s *Schema) AddRequiredProperties(ps ...*Property) *Schema {
 
 // SetRequired sets the Required of the Schema.
 func (s *Schema) SetRequired(r []string) *Schema {
-	s.Required = r
+	s.Required = slices.Clone(r)
 	return s
 }
 
 // SetItems sets the Items of the Schema.
 func (s *Schema) SetItems(i *Schema) *Schema {
-	s.Items = i
+	s.Items = &Items{
+		Item: i,
+	}
 	return s
 }
 
@@ -841,19 +850,19 @@ func (s *Schema) SetNullable(n bool) *Schema {
 
 // SetAllOf sets the AllOf of the Schema.
 func (s *Schema) SetAllOf(a []*Schema) *Schema {
-	s.AllOf = a
+	s.AllOf = slices.Clone(a)
 	return s
 }
 
 // SetOneOf sets the OneOf of the Schema.
 func (s *Schema) SetOneOf(o []*Schema) *Schema {
-	s.OneOf = o
+	s.OneOf = slices.Clone(o)
 	return s
 }
 
 // SetAnyOf sets the AnyOf of the Schema.
 func (s *Schema) SetAnyOf(a []*Schema) *Schema {
-	s.AnyOf = a
+	s.AnyOf = slices.Clone(a)
 	return s
 }
 
@@ -970,6 +979,12 @@ func (s *Schema) SetDefault(d json.RawMessage) *Schema {
 	return s
 }
 
+// SetDeprecated sets the Deprecated of the Schema.
+func (s *Schema) SetDeprecated(d bool) *Schema {
+	s.Deprecated = d
+	return s
+}
+
 // ToNamed returns a NamedSchema wrapping the receiver.
 func (s *Schema) ToNamed(n string) *NamedSchema {
 	return NewNamedSchema(n, s)
@@ -1022,8 +1037,10 @@ func schema(t, f string) *Schema {
 // AsArray returns a new "array" Schema wrapping the receiver.
 func (s *Schema) AsArray() *Schema {
 	return &Schema{
-		Type:  string(jsonschema.Array),
-		Items: s,
+		Type: jsonschema.Array.String(),
+		Items: &Items{
+			Item: s,
+		},
 	}
 }
 
