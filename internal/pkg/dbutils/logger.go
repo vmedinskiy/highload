@@ -18,7 +18,7 @@ func NewLogger() *Logger {
 	return &Logger{logger: log.L().Desugar().WithOptions(zap.AddCallerSkip(1))}
 }
 
-func (dl *Logger) Log(ctx context.Context, level pgx.LogLevel, msg string, data map[string]interface{}) {
+func (dl *Logger) Log(_ context.Context, level pgx.LogLevel, msg string, data map[string]any) {
 	fields := make([]zapcore.Field, len(data))
 	i := 0
 	for k, v := range data {

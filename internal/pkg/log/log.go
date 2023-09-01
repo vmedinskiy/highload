@@ -61,7 +61,7 @@ func C(ctx context.Context) *Logger {
 	return &Logger{zap.L().Sugar()}
 }
 
-func (l *Logger) With(args ...interface{}) *Logger {
+func (l *Logger) With(args ...any) *Logger {
 	return &Logger{l.SugaredLogger.With(args...)}
 }
 
